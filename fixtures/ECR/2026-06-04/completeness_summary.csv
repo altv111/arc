@@ -1,0 +1,4 @@
+cobdate,UBR Level 8 Name,UBR Level 8 ID,UBR Level 9 Name,VCS Run Qualifier,VCS Calc Type,Portfolio Name,Trader Book Name,Frequency,Trade Count Expected,Trade Count Error Partial,Trade Count Error Full,Trade Count Match,Trade Count Not Expected,Trade Count Not Received,Trade Count Received
+2026-06-04,Europe Core Rates,ECR,Europe Linear Flow,1DVaR,FULLREVAL,Portfolio Rates Linear,Book Linear 1,Daily,100,2,0,98,0,1,99
+2026-06-04,Europe Core Rates,ECR,Europe Non Linear,1DVaR,FULLREVAL,Portfolio Rates Options,Book Options 1,Daily,50,0,1,49,0,0,50
+2026-06-04,US Credit,USC,US Credit Flow,1DVaR,FULLREVAL,Portfolio Credit Flow,Book Credit 1,Daily,80,0,0,80,0,0,80

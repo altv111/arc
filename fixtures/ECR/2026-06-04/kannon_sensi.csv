@@ -1,0 +1,4 @@
+cobdate,methodology,portfolio_name,UBR Name Level 08,UBR Name Level 09,Trade Book Name,Risk Type,Sensitivity Type,Trade Book ID,Sensitivity Amount Eur
+2026-06-04,KANNON,Portfolio Rates Linear,Europe Core Rates,Europe Linear Flow,Book Linear 1,abc,Delta,BL1,90000
+2026-06-04,KANNON,Portfolio Rates Options,Europe Core Rates,Europe Non Linear,Book Options 1,abc,Delta,BO1,40000
+2026-06-04,KANNON,Portfolio Credit Flow,US Credit,US Credit Flow,Book Credit 1,abc,Delta,BC1,20000

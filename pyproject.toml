@@ -1,0 +1,15 @@
+[project]
+name = "arc-skeleton"
+version = "0.1.0"
+description = "ARC rule execution skeleton"
+requires-python = ">=3.11"
+dependencies = ["pydantic>=2"]
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100

@@ -1,0 +1,609 @@
+Design Note: Scope, Check Scope, Breach Level and Fetch Strategy
+1. Treat each check row as an independent evaluation
+
+Given a business definition like:
+
+Review Area = Europe Core Rates
+
+Check 1 = Missing Trade Threshold
+Check 2 = MVAR Threshold
+Check 3 = Sensitivity Threshold
+
+each row within a check should be considered a separate evaluation unit.
+
+A row contributes:
+
+additional filters
+thresholds
+breach behavior
+
+Therefore:
+
+check row
+    =>
+filter
+    =>
+evaluate
+    =>
+produce breaches
+2. Parent scope is rule-wide
+
+Example:
+
+UBR Level 8 = Europe Core Rates
+
+This is the universal filter for the rule.
+
+Rename conceptually to:
+
+parent_scope
+
+Equivalent SQL:
+
+WHERE ubr_level_8 = 'Europe Core Rates'
+
+Everything in the rule executes inside this universe.
+
+3. Each row may define additional scope
+
+Example:
+
+UBR Level 9 in
+(
+    Europe Linear Flow,
+    Europe Non Linear
+)
+
+This is not the parent scope.
+
+This is a row-specific filter.
+
+Call it:
+
+check_scope
+
+Equivalent SQL:
+
+AND ubr_level_9 IN (...)
+
+Therefore:
+
+effective_scope
+=
+parent_scope
++
+check_scope
+4. Output should be described using breach_level
+
+The old vocabulary used:
+
+roll_level
+correct_level
+
+These are implementation details.
+
+The business concept is:
+
+What level breached?
+
+Use:
+
+breach_level
+
+Examples:
+
+portfolio
+trade
+book
+ubr_level_9
+
+A handler evaluates and returns:
+
+breached entities
+at breach_level
+
+Example:
+
+Portfolio 1 breached
+Portfolio 2 breached
+Portfolio 3 breached
+
+Decision logic later determines what correction action to perform.
+
+5. Universal vocabulary
+
+The core vocabulary becomes:
+
+parent_scope
+check_scope
+breach_level
+
+Every check can be expressed using only these concepts.
+
+A check:
+
+operates on:
+    parent_scope + check_scope
+
+produces:
+    breaches at breach_level
+6. Domain-specific filters remain handler-owned
+
+Example:
+
+Kannon Risk Type List = [abc]
+
+This is not a universal framework concept.
+
+It is handler-specific business logic.
+
+Example:
+
+TradeLevelKannonSensiHandler
+
+must understand:
+
+risk_type_list
+
+and apply it as an additional WHERE clause.
+
+Framework should not attempt to generalize every business-specific filter.
+
+Open Design Question: Data Fetching
+
+Some checks require multiple datasets.
+
+Example:
+
+MVAR check
+
+needs:
+
+trade-level MVAR
+portfolio-level VAR
+
+Potential strategies:
+
+Option A: Fetch once per check type
+fetch(parent_scope)
+
+for each row:
+    apply row filters
+    evaluate
+
+Advantages:
+
+fewer database round trips
+simpler execution
+likely faster
+Option B: Fetch per row
+row 1 -> fetch
+row 2 -> fetch
+row 3 -> fetch
+
+Advantages:
+
+maximum flexibility
+each row can request different datasets
+
+Disadvantages:
+
+potentially expensive
+duplicated queries
+Preferred direction
+
+Use:
+
+fetch once per check type
+
+with:
+
+parent_scope
+
+as the primary database filter.
+
+Then apply:
+
+check_scope
+
+and other row-specific filters in memory.
+
+Only move to per-row fetches if a check genuinely requires different source datasets.
+
+Final Mental Model
+
+Every business check should translate naturally into:
+
+SELECT ...
+FROM ...
+WHERE parent_scope
+  AND check_scope
+  AND business_specific_filters
+GROUP BY breach_level
+HAVING threshold_breached
+
+If a JSON construct cannot be explained in those terms, reconsider the design.
+
+I think this was actually one of the most important shifts in the discussion: moving away from "what handler do I call?" toward "what SELECT, WHERE and GROUP BY is this row describing?" Once you do that, the JSON becomes a business DSL rather than a workflow configuration.
+
+=================MORE DETAILS============
+ARC / MRAC Design Update (Continuation)
+
+Before making code changes, reconcile this with the existing ARC skeleton and registry/handler architecture.
+
+Key realization
+
+The current design conflates two very different concepts under the word scope.
+
+We now distinguish:
+
+1. parent_scope (rule-level filter)
+
+Defines the universe of data the rule operates on.
+
+Example:
+
+{
+  "parent_scope": {
+    "ubr_level_8": ["Europe Core Rates"]
+  }
+}
+
+Meaning:
+
+WHERE ubr_level_8 = 'Europe Core Rates'
+
+The orchestrator should apply this filter before handing data to handlers.
+
+2. check_scope (row-level filter)
+
+Each row inside a check may further narrow the data.
+
+Example:
+
+{
+  "check_scope": {
+    "ubr_level_9": [
+      "Europe Linear Flow",
+      "Europe Non Linear"
+    ]
+  }
+}
+
+Meaning:
+
+AND ubr_level_9 IN (...)
+
+A check row operates on:
+
+effective_scope = parent_scope + check_scope
+3. breach_level
+
+This is NOT a filter.
+
+It defines the level at which correction/action is targeted.
+
+Example:
+
+"breach_level": "portfolio"
+
+means:
+
+Handler produces breached portfolios
+Decision stage determines what to roll/correct
+
+This is an output level, not an input filter.
+
+Each check row is an independent evaluation
+
+Current JSON:
+
+{
+  "check_id": "mvar",
+  "rows": [
+    {...},
+    {...}
+  ]
+}
+
+Conceptually becomes:
+
+mvar row 1
+mvar row 2
+
+Each row:
+
+has its own filter
+has its own thresholds
+produces its own breaches
+
+Treat each row as an independent evaluation unit.
+
+New vocabulary
+
+Avoid generic "scope".
+
+Use:
+
+parent_scope
+check_scope
+breach_level
+
+These are universal concepts.
+
+Every check:
+
+effective_filter = parent_scope + check_scope
+
+evaluate()
+
+produce breaches at breach_level
+check_level renamed to check_grain
+
+Previous discussion used:
+
+check_level
+
+Better term:
+
+check_grain
+
+because it defines the grain at which the handler evaluates data.
+
+Examples:
+
+portfolio
+trade
+book
+ubr_level_9
+Handler ownership of grain
+
+Handlers remain grain-specific.
+
+DO NOT build generic polymorphic handlers.
+
+Preferred:
+
+class MissingTradeThresholdGateHandler(CheckHandler):
+    check_id = "missing_trade_threshold_gate"
+    check_grain = "portfolio"
+class TradeLevelKannonSensiHandler(CheckHandler):
+    check_id = "trade_level_kannon_sensi_mat"
+    check_grain = "trade"
+
+Loader validates:
+
+JSON check_grain
+==
+handler check_grain
+
+Fail fast if mismatch.
+
+Parent scope must be honored centrally
+
+Current concern:
+
+Handlers often hardcode grouping levels.
+
+New design:
+
+Orchestrator / resolver applies parent_scope first.
+Handlers receive already-narrowed data.
+
+Reason:
+
+If handlers filter themselves:
+
+easy to forget
+silent correctness bug
+
+Prefer:
+
+centralized filtering
+
+before handler execution.
+
+SQL mental model
+
+The JSON should eventually map cleanly to:
+
+SELECT ...
+FROM ...
+WHERE parent_scope
+  AND check_scope
+GROUP BY check_grain
+HAVING threshold breach
+
+If a JSON construct cannot be expressed in those terms, question whether it belongs.
+
+Example 1: Missing Trade Threshold Gate
+
+Business meaning:
+
+Review Area:
+Europe Core Rates
+
+Filter:
+ubr_level_8 = Europe Core Rates
+
+Additional Filter:
+ubr_level_9 IN (
+  Europe Linear Flow,
+  Europe Non Linear
+)
+
+Grain:
+Portfolio
+
+Equivalent SQL shape:
+
+SELECT portfolio,
+       missing_trade_count
+FROM completeness_summary
+WHERE ubr_level_8 = 'Europe Core Rates'
+  AND ubr_level_9 IN (...)
+GROUP BY portfolio
+
+Threshold:
+
+missing % > 2
+OR
+missing trades > 1000
+
+Output:
+
+breached portfolios
+
+at:
+
+breach_level = portfolio
+Example 2: MVAR Threshold
+
+Business meaning:
+
+parent_scope:
+    ubr_level_8 = Europe Core Rates
+
+check_scope:
+    ubr_level_9 IN (...)
+
+grain:
+    portfolio
+
+Calculation:
+
+(sum MVAR of missing trades at portfolio level)
+/
+(parent portfolio VAR)
+
+Threshold:
+
+5%
+
+Output:
+
+breached portfolios
+Example 3: Kannon Sensitivity Materiality
+
+Business meaning:
+
+parent_scope:
+    Europe Core Rates
+
+check_scope:
+    ubr_level_9 IN (...)
+
+extra filter:
+    risk_type IN [abc]
+
+grain:
+    trade
+
+Calculation:
+
+trade_sensi
+/
+portfolio_total_sensi_for_same_risk_type
+
+Threshold:
+
+5%
+
+Output:
+
+breached trades
+Cross-grain calculations are valid
+
+Example:
+
+trade_sensi
+/
+portfolio_total_sensi
+
+Pattern:
+
+aggregate at parent grain
+evaluate at child grain
+
+This is common enough to be treated as a first-class pattern.
+
+No need for generic grain-polymorphic handlers.
+
+Keep handlers specific.
+
+Fetch strategy decision
+
+Do NOT fetch per row.
+
+Preferred model:
+
+One fetch per check type
+using parent_scope
+
+Then:
+
+Apply row-level filters in memory
+
+Reason:
+
+Rows frequently differ only by thresholds or small filters.
+
+Avoid repeated database round trips.
+
+Pseudo-flow:
+
+fetch(parent_scope)
+
+for row in check.rows:
+    filtered = apply(check_scope)
+    evaluate(filtered)
+Breach output shape
+
+Handlers should emit full hierarchy context.
+
+Not:
+
+{
+  "breached_scope_levels": [
+    {
+      "portfolio": "P1"
+    }
+  ]
+}
+
+Prefer:
+
+{
+  "breached_scope_levels": [
+    {
+      "ubr_level_8": "Europe Core Rates",
+      "ubr_level_9": "Europe Linear Flow",
+      "portfolio": "P1"
+    }
+  ]
+}
+
+Consumers should never need to reconstruct hierarchy later.
+
+Important design principle
+
+The JSON should read like a business specification.
+
+A business user should be able to mentally translate every row into:
+
+SELECT
+WHERE
+GROUP BY
+HAVING
+
+The handler implementation is merely the execution engine for that specification.
+
+Before changing code, compare this design against:
+
+current registry architecture
+current CheckHandler base class
+current ScopeKey implementation
+current row models
+current resolver/orchestrator flow
+
+and identify the minimal set of changes needed to align the existing skeleton with this vocabulary and execution model.
