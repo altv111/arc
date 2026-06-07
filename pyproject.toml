@@ -3,7 +3,7 @@ name = "arc-skeleton"
 version = "0.1.0"
 description = "ARC rule execution skeleton"
 requires-python = ">=3.11"
-dependencies = ["pydantic>=2"]
+dependencies = ["pydantic>=2", "rich>=13"]
 
 [project.optional-dependencies]
 dev = ["pytest", "ruff"]

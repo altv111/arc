@@ -58,6 +58,53 @@ Gate behavior is controlled by `evaluation_policy.gate_logic`:
 
 The correction chain runs only if at least one evaluate node fails.
 
+## Visualizing Rule Paths
+
+You can render the lanes and compute/decision paths without executing handlers:
+
+```bash
+./env/bin/python -m arc.cli.visualize_rule fixtures/rules/row1.json
+```
+
+The default `rich` view is a colorized terminal demo view. It shows:
+
+- lanes and nodes
+- handlers
+- requested datasets
+- `parent_scope + check_scope`
+- evaluation grain and breach level
+- thresholds
+- decision/act/record outputs
+- a tree of compute and decision paths
+
+For a plain text fallback:
+
+```bash
+./env/bin/python -m arc.cli.visualize_rule fixtures/rules/row1.json --format plan
+```
+
+For Mermaid swimlanes:
+
+```bash
+./env/bin/python -m arc.cli.visualize_rule fixtures/rules/row1.json --format mermaid
+```
+
+The Mermaid output uses lanes for:
+
+```text
+gate -> evaluate -> attribute -> decide -> act -> record
+```
+
+Each check row is shown as an individual node. Gate rows fan out to evaluate
+rows, evaluate rows converge into attribute, and the correction decision path
+continues through decide, act, and record.
+
+For terminal-friendly output:
+
+```bash
+./env/bin/python -m arc.cli.visualize_rule fixtures/rules/row1.json --format text
+```
+
 ## Node Responsibilities
 
 Every node runs through the same orchestration shell:

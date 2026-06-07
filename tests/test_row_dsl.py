@@ -14,6 +14,7 @@ from arc.handlers.registry import HANDLERS
 from arc.nodes.base import compute_idempotency_key
 from arc.rule import build_rule, build_rule_from_json
 from arc.runner import Runner
+from arc.visualize import render_rule_mermaid, render_rule_plan, render_rule_rich
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -52,6 +53,63 @@ def test_rule_builder_expands_one_node_per_check_row(tmp_path):
         "act",
         "record",
     ]
+
+
+def test_rule_visualization_renders_swimlane_paths(tmp_path):
+    evidence_store, run_state_store = _stores(tmp_path)
+    rule = build_rule_from_json(
+        REPO_ROOT / "fixtures" / "rules" / "row1.json",
+        evidence_store=evidence_store,
+        run_state_store=run_state_store,
+    )
+
+    rendered = render_rule_mermaid(rule)
+
+    assert "subgraph gate[gate]" in rendered
+    assert "subgraph evaluate[evaluate]" in rendered
+    assert "subgraph attribute[attribute]" in rendered
+    assert "n_gate_missing_trade_threshold_gate_0 --> n_evaluate_dod_var_move_0" in rendered
+    assert "n_evaluate_mvar_0 --> n_attribute" in rendered
+    assert "n_attribute --> n_decide" in rendered
+    assert "n_decide --> n_act" in rendered
+    assert "n_act --> n_record" in rendered
+
+
+def test_rule_plan_view_includes_datasets_and_decision_path(tmp_path):
+    evidence_store, run_state_store = _stores(tmp_path)
+    rule = build_rule_from_json(
+        REPO_ROOT / "fixtures" / "rules" / "row1.json",
+        evidence_store=evidence_store,
+        run_state_store=run_state_store,
+    )
+
+    rendered = render_rule_plan(rule)
+
+    assert "ARC Plan | Rule 1: Completeness" in rendered
+    assert "Parent scope: ubr_level_8=Europe Core Rates" in rendered
+    assert "datasets   : completeness_summary" in rendered
+    assert "datasets   : dod_var_extract" in rendered
+    assert "datasets   : mvar" in rendered
+    assert "where      : parent_scope + ubr_level_9=Europe Linear Flow" in rendered
+    assert "emits      : correction decisions" in rendered
+    assert "emits      : correction intents + correction receipt" in rendered
+
+
+def test_rule_rich_view_includes_ansi_demo_plan(tmp_path):
+    evidence_store, run_state_store = _stores(tmp_path)
+    rule = build_rule_from_json(
+        REPO_ROOT / "fixtures" / "rules" / "row1.json",
+        evidence_store=evidence_store,
+        run_state_store=run_state_store,
+    )
+
+    rendered = render_rule_rich(rule)
+
+    assert "\x1b[" in rendered
+    assert "ARC Rule Plan | Rule 1: Completeness" in rendered
+    assert "gate:missing_trade_threshold_gate:0" in rendered
+    assert "dod_var_extract" in rendered
+    assert "Compute and decision paths" in rendered
 
 
 def test_check_grain_mismatch_fails_fast(tmp_path):
