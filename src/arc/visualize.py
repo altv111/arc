@@ -6,6 +6,7 @@ from typing import Any
 
 from arc.nodes.base import Node
 from arc.rule import Rule
+from arc.core.results import IndeterminateError
 from rich import box
 from rich.console import Console, Group
 from rich.panel import Panel
@@ -212,9 +213,28 @@ def spec_slice(node: Node) -> dict[str, Any]:
 
 
 def _datasets(node: Node) -> str:
-    input_spec = getattr(getattr(node, "_handler"), "input_spec", None)  # noqa: SLF001
-    datasets = sorted((input_spec.datasets or {}).keys()) if input_spec is not None else []
+    handler = getattr(node, "_handler")  # noqa: SLF001
+    try:
+        input_spec = handler.plan_inputs(_planning_spec_for_visual(node))
+    except IndeterminateError:
+        input_spec = handler.input_spec
+    datasets = [
+        _dataset_label(name, input_spec.datasets[name])
+        for name in sorted((input_spec.datasets or {}).keys())
+    ]
     return ", ".join(datasets) if datasets else "(none)"
+
+
+def _planning_spec_for_visual(node: Node) -> dict[str, Any]:
+    spec = spec_slice(node)
+    spec.setdefault("__run_type", "<runtime>")
+    return spec
+
+
+def _dataset_label(name: str, params: dict[str, Any]) -> str:
+    if not params:
+        return name
+    return f"{name}({_short_dict(params)})"
 
 
 def _rich_header(rule: Rule) -> Panel:
@@ -324,7 +344,7 @@ def _short_dict(value: dict[str, Any]) -> str:
         return "{}"
     parts = []
     for key, raw in value.items():
-        if isinstance(raw, list):
+        if isinstance(raw, (list, tuple)):
             rendered = ",".join(str(item) for item in raw)
         else:
             rendered = str(raw)

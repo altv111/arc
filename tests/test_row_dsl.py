@@ -88,7 +88,7 @@ def test_rule_plan_view_includes_datasets_and_decision_path(tmp_path):
     assert "ARC Plan | Rule 1: Completeness" in rendered
     assert "Parent scope: ubr_level_8=Europe Core Rates" in rendered
     assert "datasets   : completeness_summary" in rendered
-    assert "datasets   : dod_var_extract" in rendered
+    assert "datasets   : dod_var_extract(grain=portfolio; var_type=TOTAL; fields=<runtime_curr_var>,<runtime_prev_var>)" in rendered
     assert "datasets   : mvar" in rendered
     assert "where      : parent_scope + ubr_level_9=Europe Linear Flow" in rendered
     assert "emits      : correction decisions" in rendered
@@ -182,6 +182,60 @@ def test_row1_run_applies_parent_and_check_scopes(tmp_path):
     assert (tmp_path / "runs" / "row1-test" / "run.json").exists()
 
 
+def test_dod_var_move_can_plan_grain_specific_extract(tmp_path):
+    evidence_store, run_state_store = _stores(tmp_path)
+    spec = {
+        "row_id": 2,
+        "parent_scope": {"ubr_level_8": ["Europe Core Rates"]},
+        "impact_checks": [
+            {
+                "check_id": "missing_trade_threshold_gate",
+                "mode": "gate",
+                "check_grain": "portfolio",
+                "rows": [
+                    {
+                        "check_scope": {},
+                        "breach_level": "portfolio",
+                        "threshold": {"rel": 0},
+                    }
+                ],
+            },
+            {
+                "check_id": "dod_var_move",
+                "mode": "evaluate",
+                "check_grain": "ubr_level_9",
+                "rows": [
+                    {
+                        "check_scope": {},
+                        "breach_level": "ubr_level_9",
+                        "threshold": {"rel": 0.15},
+                    }
+                ],
+            },
+        ],
+        "attribute_handler": "attribute_completeness_drilldown",
+        "decide_handler": "decide_correction",
+        "act_handler": "act_correction",
+        "record_handler": "record_breach",
+        "decision_options": ["fill_from_yesterday"],
+    }
+    rule = build_rule(spec, evidence_store=evidence_store, run_state_store=run_state_store)
+    runner = Runner(
+        reporting_client=CSVReportingClient(REPO_ROOT / "fixtures" / "ECR" / "2026-06-04"),
+        evidence_store=evidence_store,
+        run_state_store=run_state_store,
+        runs_root=tmp_path / "runs",
+    )
+
+    report = runner.run_rule(rule, _ctx(), run_id="dod-ubr9")
+
+    dod = next(result for result in report.results if result.node_id == "evaluate:dod_var_move:0")
+    assert dod.status.value == "fail"
+    assert dod.metrics["n_scopes_examined"] == 2
+    assert all("ubr_level_9" in scope.levels for scope in dod.breached_scopes)
+    assert dod.upstream_data_versions.keys() == {"dod_var_extract"}
+
+
 def test_idempotency_changes_when_row_spec_changes(tmp_path):
     evidence_store, run_state_store = _stores(tmp_path)
     base_spec = {
@@ -216,6 +270,12 @@ def test_idempotency_changes_when_row_spec_changes(tmp_path):
         scope_hash="scope",
         config_version="config",
         code_version="code",
+        runtime_identity={
+            "ba": "ECR",
+            "business_date": "2026-06-04",
+            "run_type": "1dvar",
+            "snapshot_id": "fixture",
+        },
         handler_version=HANDLERS["mvar"].handler_version,
         spec_slice=first.nodes[0]._spec_slice,  # noqa: SLF001
         upstream_data_versions={"mvar": "data"},
@@ -227,6 +287,12 @@ def test_idempotency_changes_when_row_spec_changes(tmp_path):
         scope_hash="scope",
         config_version="config",
         code_version="code",
+        runtime_identity={
+            "ba": "ECR",
+            "business_date": "2026-06-04",
+            "run_type": "1dvar",
+            "snapshot_id": "fixture",
+        },
         handler_version=HANDLERS["mvar"].handler_version,
         spec_slice=second.nodes[0]._spec_slice,  # noqa: SLF001
         upstream_data_versions={"mvar": "data"},

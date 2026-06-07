@@ -22,9 +22,18 @@ DOD_VAR_EXTRACT = "dod_var_extract"
 class DodVarMoveHandler(CheckHandler):
     check_id: ClassVar[str] = "dod_var_move"
     handler_version: ClassVar[str] = "1.0.0"
-    check_grain: ClassVar[str] = "portfolio"
+    supported_check_grains: ClassVar[set[str]] = {"portfolio", "ubr_level_9"}
 
-    input_spec: ClassVar[InputSpec] = InputSpec(datasets={DOD_VAR_EXTRACT: {}})
+    def plan_inputs(self, spec_slice: dict[str, Any]) -> InputSpec:
+        return InputSpec(
+            datasets={
+                DOD_VAR_EXTRACT: {
+                    "grain": spec_slice["check_grain"],
+                    "var_type": "TOTAL",
+                    "fields": _fields_for_run_type(str(spec_slice["__run_type"]).lower()),
+                }
+            }
+        )
 
     def execute(self, inputs: ResolvedInputs, spec_slice: dict[str, Any]) -> HandlerOutput:
         rows = filter_rows_by_scope(
@@ -105,3 +114,18 @@ def _diff_pct(curr_var: float, prev_var: float) -> float | None:
     if prev_var == 0:
         return None
     return round(100.0 * (curr_var - prev_var) / abs(prev_var), 6)
+
+
+def _fields_for_run_type(run_type: str) -> tuple[str, str]:
+    if run_type == "<runtime>":
+        return "<runtime_curr_var>", "<runtime_prev_var>"
+    if run_type == "1dvar":
+        return "Curr1DVaR", "Prev1DVAR"
+    if run_type == "10dvar":
+        return "Curr10DVaR", "Prev10DVAR"
+    if run_type == "10dsvar":
+        return "Curr1DSVaR", "Prev1DSVAR"
+    raise IndeterminateError(
+        "unsupported run_type for DoD VaR move input planning",
+        details={"run_type": run_type, "supported": ["1dvar", "10dvar", "10dsvar"]},
+    )

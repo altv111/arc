@@ -89,19 +89,19 @@ class SensiRow(BaseModel):
 
 @runtime_checkable
 class ReportingClient(Protocol):
-    def get_completeness_summary(self, ba: str, business_date: date) -> Dataset:
+    def get_completeness_summary(self, ba: str, business_date: date, **params: Any) -> Dataset:
         ...
 
-    def get_mvar(self, ba: str, business_date: date) -> Dataset:
+    def get_mvar(self, ba: str, business_date: date, **params: Any) -> Dataset:
         ...
 
-    def get_dod_var_extract(self, ba: str, business_date: date) -> Dataset:
+    def get_dod_var_extract(self, ba: str, business_date: date, **params: Any) -> Dataset:
         ...
 
-    def get_rf_sensi(self, ba: str, business_date: date) -> Dataset:
+    def get_rf_sensi(self, ba: str, business_date: date, **params: Any) -> Dataset:
         ...
 
-    def get_kannon_sensi(self, ba: str, business_date: date) -> Dataset:
+    def get_kannon_sensi(self, ba: str, business_date: date, **params: Any) -> Dataset:
         ...
 
 
@@ -120,17 +120,22 @@ class CSVReportingClient:
             rows = tuple(model.model_validate(dict(row)) for row in reader)
         return Dataset(rows=rows, content_hash=digest)
 
-    def get_completeness_summary(self, ba: str, business_date: date) -> Dataset:
+    def get_completeness_summary(self, ba: str, business_date: date, **params: Any) -> Dataset:
         return self._read_csv("completeness_summary.csv", CompletenessSummaryRow)
 
-    def get_mvar(self, ba: str, business_date: date) -> Dataset:
+    def get_mvar(self, ba: str, business_date: date, **params: Any) -> Dataset:
         return self._read_csv("mvar.csv", MVarRow)
 
-    def get_dod_var_extract(self, ba: str, business_date: date) -> Dataset:
-        return self._read_csv("dod_var_extract.csv", DodVarExtractRow)
+    def get_dod_var_extract(self, ba: str, business_date: date, **params: Any) -> Dataset:
+        grain = params.get("grain") or "portfolio"
+        return self._read_csv(f"dod_var_extract__{_safe_grain(grain)}.csv", DodVarExtractRow)
 
-    def get_rf_sensi(self, ba: str, business_date: date) -> Dataset:
+    def get_rf_sensi(self, ba: str, business_date: date, **params: Any) -> Dataset:
         return self._read_csv("rf_sensi.csv", SensiRow)
 
-    def get_kannon_sensi(self, ba: str, business_date: date) -> Dataset:
+    def get_kannon_sensi(self, ba: str, business_date: date, **params: Any) -> Dataset:
         return self._read_csv("kannon_sensi.csv", SensiRow)
+
+
+def _safe_grain(grain: Any) -> str:
+    return str(grain).lower().replace(" ", "_")

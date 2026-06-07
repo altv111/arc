@@ -188,8 +188,14 @@ def _check_nodes(
     except KeyError as exc:
         raise KeyError(f"row {row_id}: no handler registered for check_id={ic.check_id!r}") from exc
 
+    supported_grains = getattr(handler, "supported_check_grains", None)
     handler_grain = getattr(handler, "check_grain", None)
-    if handler_grain and handler_grain != ic.check_grain:
+    if supported_grains and ic.check_grain not in supported_grains:
+        raise ValueError(
+            f"row {row_id}: check_id={ic.check_id!r} declares check_grain={ic.check_grain!r} "
+            f"but handler supports {sorted(supported_grains)!r}"
+        )
+    if not supported_grains and handler_grain and handler_grain != ic.check_grain:
         raise ValueError(
             f"row {row_id}: check_id={ic.check_id!r} declares check_grain={ic.check_grain!r} "
             f"but handler requires {handler_grain!r}"

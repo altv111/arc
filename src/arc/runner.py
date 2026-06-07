@@ -46,15 +46,17 @@ class DatasetResolver:
                 fn = self._dispatch[name]
             except KeyError as exc:
                 raise KeyError(f"no resolver for dataset {name!r}; known: {sorted(self._dispatch)}") from exc
+            params = input_spec.datasets[name]
             cache_key = (
                 name,
                 ctx.ba,
                 ctx.business_date.isoformat(),
                 json.dumps(parent_scope, sort_keys=True, separators=(",", ":")),
+                json.dumps(params, sort_keys=True, separators=(",", ":")),
             )
             ds = self._cache.get(cache_key)
             if ds is None:
-                ds = _filter_dataset(fn(ctx.ba, ctx.business_date), parent_scope)
+                ds = _filter_dataset(fn(ctx.ba, ctx.business_date, **params), parent_scope)
                 self._cache[cache_key] = ds
             data[name] = ds
             versions[name] = ds.content_hash
@@ -215,7 +217,7 @@ class Runner:
         prior_results: list[NodeResult],
         parent_scope: dict[str, list[str]],
     ) -> NodeResult:
-        input_spec = getattr(node._handler, "input_spec", InputSpec())  # noqa: SLF001
+        input_spec = node._handler.plan_inputs(node.planning_spec(ctx))  # noqa: SLF001
         resolved = self._resolver.resolve(input_spec, ctx, parent_scope)
 
         if UPSTREAM_RESULTS_KEY in input_spec.datasets:

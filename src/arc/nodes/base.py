@@ -14,6 +14,7 @@ from arc.core.evidence_store import EvidenceStore
 from arc.core.results import (
     EvidenceRef,
     HandlerOutput,
+    InputSpec,
     IndeterminateError,
     NodeResult,
     NodeStatus,
@@ -30,6 +31,9 @@ class HandlerProtocol(Protocol):
     handler_version: str
     check_grain: str | None
 
+    def plan_inputs(self, spec_slice: dict[str, Any]) -> InputSpec:
+        ...
+
     def execute(self, inputs: ResolvedInputs, spec_slice: dict[str, Any]) -> HandlerOutput:
         ...
 
@@ -42,6 +46,7 @@ def compute_idempotency_key(
     scope_hash: str,
     config_version: str,
     code_version: str,
+    runtime_identity: dict[str, str],
     handler_version: str,
     spec_slice: dict[str, Any],
     upstream_data_versions: dict[str, str],
@@ -53,6 +58,7 @@ def compute_idempotency_key(
         "scope_hash": scope_hash,
         "config_version": config_version,
         "code_version": code_version,
+        "runtime_identity": dict(sorted(runtime_identity.items())),
         "handler_version": handler_version,
         "spec_slice": spec_slice,
         "upstream_data_versions": dict(sorted(upstream_data_versions.items())),
@@ -122,6 +128,12 @@ class Node(ABC):
             scope_hash=scope.canonical_hash(),
             config_version=ctx.config_version,
             code_version=ctx.code_version,
+            runtime_identity={
+                "ba": ctx.ba,
+                "business_date": ctx.business_date.isoformat(),
+                "run_type": ctx.run_type,
+                "snapshot_id": ctx.snapshot_id,
+            },
             handler_version=self._handler.handler_version,
             spec_slice=self._spec_slice,
             upstream_data_versions=resolved_inputs.versions,
@@ -216,6 +228,9 @@ class Node(ABC):
         merged["__config_version"] = ctx.config_version
         merged["__code_version"] = ctx.code_version
         return merged
+
+    def planning_spec(self, ctx: BARunContext) -> dict[str, Any]:
+        return self._augmented_spec_slice(ctx)
 
     def _post_process_output(
         self,

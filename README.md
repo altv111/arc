@@ -109,6 +109,7 @@ For terminal-friendly output:
 
 Every node runs through the same orchestration shell:
 
+- ask the handler to plan row-aware inputs from the node spec
 - resolve declared handler inputs through `DatasetResolver`
 - apply `parent_scope` centrally before handler execution
 - inject upstream results when a handler declares `_upstream_results`
@@ -121,7 +122,8 @@ Every node runs through the same orchestration shell:
 - update the blackboard
 
 Handlers do not read files, access clients, call databases, use clocks, or touch
-the blackboard.
+the blackboard. Handlers may influence what gets fetched through
+`plan_inputs(...)`; the runner still performs the fetch and records data hashes.
 
 ## Clients
 
@@ -140,7 +142,8 @@ Handlers depend only on `ResolvedInputs`.
 The CSV fixtures under `fixtures/ECR/2026-06-04/` include:
 
 - `completeness_summary.csv`
-- `dod_var_extract.csv`
+- `dod_var_extract__portfolio.csv`
+- `dod_var_extract__ubr_level_9.csv`
 - `mvar.csv`
 - `rf_sensi.csv`
 - `kannon_sensi.csv`

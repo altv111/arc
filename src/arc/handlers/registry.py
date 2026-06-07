@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar
 
-from arc.core.results import HandlerOutput, ResolvedInputs
+from arc.core.results import HandlerOutput, InputSpec, ResolvedInputs
 
 
 class CheckHandler(ABC):
@@ -12,6 +12,8 @@ class CheckHandler(ABC):
     check_id: ClassVar[str] = ""
     handler_version: ClassVar[str] = ""
     check_grain: ClassVar[str | None] = None
+    supported_check_grains: ClassVar[set[str] | None] = None
+    input_spec: ClassVar[InputSpec] = InputSpec()
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
@@ -25,6 +27,9 @@ class CheckHandler(ABC):
     @abstractmethod
     def execute(self, inputs: ResolvedInputs, spec_slice: dict[str, Any]) -> HandlerOutput:
         """Same inputs must produce same output."""
+
+    def plan_inputs(self, spec_slice: dict[str, Any]) -> InputSpec:
+        return self.input_spec
 
 
 HANDLERS: dict[str, CheckHandler] = {}
