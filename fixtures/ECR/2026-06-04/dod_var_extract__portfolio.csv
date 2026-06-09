@@ -1,4 +1,5 @@
 VARType,UBR Level 8 Name,UBR Level 9 Name,Portfolio Name,Trader Book Name,Curr1DVaR,Prev1DVAR,Diff1DVARPct,Curr10DVaR,Prev10DVAR,Diff10DVARPct,Curr1DSVaR,Prev1DSVAR,Diff1DSVARPct
-TOTAL,Europe Core Rates,Europe Linear Flow,Portfolio Rates Linear,Book Linear 1,1250000,1000000,25,4000000,3500000,14.285714,5000000,4500000,11.111111
-TOTAL,Europe Core Rates,Europe Non Linear,Portfolio Rates Options,Book Options 1,900000,850000,5.882353,3000000,2950000,1.694915,4200000,4000000,5
+TOTAL,Europe Core Rates,Europe Linear Flow,Portfolio Rates Linear,Book Linear 1,1010000,1000000,1,3520000,3500000,0.571429,4520000,4500000,0.444444
+TOTAL,Europe Core Rates,Europe Non Linear,Portfolio Rates Options,Book Options 1,855000,850000,0.588235,2960000,2950000,0.338983,4010000,4000000,0.25
+TOTAL,Europe Core Rates,Europe Linear Flow,Portfolio Rates Basis,Book Basis 1,702000,700000,0.285714,2210000,2200000,0.454545,3010000,3000000,0.333333
 TOTAL,US Credit,US Credit Flow,Portfolio Credit Flow,Book Credit 1,500000,490000,2.040816,1200000,1190000,0.840336,1800000,1750000,2.857143

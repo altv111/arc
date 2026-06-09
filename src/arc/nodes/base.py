@@ -31,7 +31,11 @@ class HandlerProtocol(Protocol):
     handler_version: str
     check_grain: str | None
 
-    def plan_inputs(self, spec_slice: dict[str, Any]) -> InputSpec:
+    def plan_inputs(
+        self,
+        spec_slice: dict[str, Any],
+        prior_results: tuple[NodeResult, ...] = (),
+    ) -> InputSpec:
         ...
 
     def execute(self, inputs: ResolvedInputs, spec_slice: dict[str, Any]) -> HandlerOutput:

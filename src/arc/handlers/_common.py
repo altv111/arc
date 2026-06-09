@@ -73,6 +73,42 @@ def upstream_results(inputs: ResolvedInputs) -> tuple[NodeResult, ...]:
     return rows
 
 
+def missing_trades_from_results(results: tuple[NodeResult, ...]) -> tuple[dict[str, Any], ...]:
+    missing: dict[str, dict[str, Any]] = {}
+    for result in results:
+        for row in result.downstream_hints.get("missing_trades") or []:
+            trade_id = row.get("trade_id")
+            hierarchy = row.get("hierarchy")
+            if trade_id and isinstance(hierarchy, dict):
+                missing[trade_id] = row
+    return tuple(missing[key] for key in sorted(missing))
+
+
+def missing_trade_ids_from_results(results: tuple[NodeResult, ...]) -> tuple[str, ...]:
+    return tuple(row["trade_id"] for row in missing_trades_from_results(results))
+
+
+def breached_values_from_results(
+    results: tuple[NodeResult, ...],
+    level: str,
+    *,
+    node_type: str | None = None,
+) -> tuple[str, ...]:
+    values: set[str] = set()
+    for result in results:
+        if node_type is not None and result.node_type != node_type:
+            continue
+        for scope in result.breached_scopes:
+            scoped = scope.levels.get(level)
+            if scoped:
+                values.update(scoped)
+        for scope_levels in result.downstream_hints.get("breached_scope_levels") or []:
+            scoped = scope_levels.get(level)
+            if scoped:
+                values.update(scoped)
+    return tuple(sorted(values))
+
+
 def typed_rows(inputs: ResolvedInputs, name: str, expected_type: type) -> tuple:
     if name not in inputs.data:
         raise IndeterminateError(

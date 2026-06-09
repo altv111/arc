@@ -147,6 +147,7 @@ The CSV fixtures under `fixtures/ECR/2026-06-04/` include:
 - `mvar.csv`
 - `rf_sensi.csv`
 - `kannon_sensi.csv`
+- `kannon_trade_level_sensi.csv`
 
 `completeness_summary` and `dod_var_extract` use business-shaped headers. Some
 fixture rows include hierarchy enrichment fields so row-level scoping remains

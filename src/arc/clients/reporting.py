@@ -37,6 +37,24 @@ class CompletenessSummaryRow(BaseModel):
     trade_count_received: int = Field(validation_alias="Trade Count Received")
 
 
+class TradeCompletenessRow(BaseModel):
+    trade_id: str
+    book_id: str
+    ubr_level_8: str
+    ubr_level_9: str
+    portfolio: str
+    status: str
+
+
+class CompletenessExceptionRow(BaseModel):
+    trade_id: str
+    book_id: str
+    ubr_level_8: str
+    ubr_level_9: str
+    portfolio: str
+    status: str
+
+
 class BookCompletenessRow(BaseModel):
     book_id: str
     ubr_level_8: str
@@ -51,6 +69,14 @@ class MVarRow(BaseModel):
     portfolio: str
     mvar: float | None = None
     parent_var: float | None = None
+
+
+class TMinus1TradeMVarRow(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    cobdate: date
+    trade_id: str
+    t_minus_1_mvar_eur: float = Field(validation_alias="t_minus_1_mvar_eur")
 
 
 class DodVarExtractRow(BaseModel):
@@ -87,12 +113,25 @@ class SensiRow(BaseModel):
     sensitivity_amount_eur: float = Field(validation_alias="Sensitivity Amount Eur")
 
 
+class KannonTradeLevelSensiRow(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    cobdate: date
+    trade_id: str
+    risk_type: str = Field(validation_alias="risktype")
+    sensitivity_type: str = Field(validation_alias="sensitivitytype")
+    amount_eur: float = Field(validation_alias="amount(eur)")
+
+
 @runtime_checkable
 class ReportingClient(Protocol):
     def get_completeness_summary(self, ba: str, business_date: date, **params: Any) -> Dataset:
         ...
 
     def get_mvar(self, ba: str, business_date: date, **params: Any) -> Dataset:
+        ...
+
+    def get_tminus1_trade_mvar(self, ba: str, business_date: date, **params: Any) -> Dataset:
         ...
 
     def get_dod_var_extract(self, ba: str, business_date: date, **params: Any) -> Dataset:
@@ -102,6 +141,15 @@ class ReportingClient(Protocol):
         ...
 
     def get_kannon_sensi(self, ba: str, business_date: date, **params: Any) -> Dataset:
+        ...
+
+    def get_trade_completeness(self, ba: str, business_date: date, **params: Any) -> Dataset:
+        ...
+
+    def get_completeness_exception_report(self, ba: str, business_date: date, **params: Any) -> Dataset:
+        ...
+
+    def get_kannon_trade_level_sensi(self, ba: str, business_date: date, **params: Any) -> Dataset:
         ...
 
 
@@ -126,6 +174,9 @@ class CSVReportingClient:
     def get_mvar(self, ba: str, business_date: date, **params: Any) -> Dataset:
         return self._read_csv("mvar.csv", MVarRow)
 
+    def get_tminus1_trade_mvar(self, ba: str, business_date: date, **params: Any) -> Dataset:
+        return self._read_csv("tminus1_trade_mvar.csv", TMinus1TradeMVarRow)
+
     def get_dod_var_extract(self, ba: str, business_date: date, **params: Any) -> Dataset:
         grain = params.get("grain") or "portfolio"
         return self._read_csv(f"dod_var_extract__{_safe_grain(grain)}.csv", DodVarExtractRow)
@@ -135,6 +186,15 @@ class CSVReportingClient:
 
     def get_kannon_sensi(self, ba: str, business_date: date, **params: Any) -> Dataset:
         return self._read_csv("kannon_sensi.csv", SensiRow)
+
+    def get_trade_completeness(self, ba: str, business_date: date, **params: Any) -> Dataset:
+        return self._read_csv("trade_completeness.csv", TradeCompletenessRow)
+
+    def get_completeness_exception_report(self, ba: str, business_date: date, **params: Any) -> Dataset:
+        return self._read_csv("completeness_exception_report.csv", CompletenessExceptionRow)
+
+    def get_kannon_trade_level_sensi(self, ba: str, business_date: date, **params: Any) -> Dataset:
+        return self._read_csv("kannon_trade_level_sensi.csv", KannonTradeLevelSensiRow)
 
 
 def _safe_grain(grain: Any) -> str:

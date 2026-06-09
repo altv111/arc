@@ -6,4 +6,6 @@ from arc.handlers import (  # noqa: F401
     dod_var_move,
     mvar,
     record_breach,
+    trade_level_kannon_sensi_mat,
+    trade_level_tminus1_mvar_mat,
 )

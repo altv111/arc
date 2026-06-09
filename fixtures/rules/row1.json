@@ -55,42 +55,49 @@
           "breach_level": "portfolio",
           "threshold": {
             "abs": 50000,
-            "rel": 0.15
+            "rel": 15
           }
         }
       ]
     },
 
     {
-      "check_id": "mvar",
-      "metric": "MVAR",
+      "check_id": "trade_level_tminus1_mvar_mat",
+      "metric": "TMinus1_MVAR_Materiality",
       "mode": "evaluate",
-      "check_grain": "portfolio",
+      "check_grain": "trade_id",
 
       "rows": [
         {
-          "check_scope": {
-            "ubr_level_9": [
-              "Europe Linear Flow"
-            ]
-          },
+          "check_scope": {},
           "breach_level": "portfolio",
           "threshold": {
-            "abs": null,
-            "rel": 5
+            "abs": 15000,
+            "rel": null
           }
-        },
+        }
+      ]
+    },
 
+    {
+      "check_id": "trade_level_kannon_sensi_mat",
+      "metric": "Kannon_Sensi_Materiality",
+      "mode": "evaluate",
+      "check_grain": "trade_id",
+
+      "rows": [
         {
-          "check_scope": {
-            "ubr_level_9": [
-              "Europe Non Linear"
-            ]
-          },
+          "check_scope": {},
           "breach_level": "portfolio",
+          "risk_type_list": [
+            "abc"
+          ],
+          "sensitivity_type_list": [
+            "Delta"
+          ],
           "threshold": {
-            "abs": 10000,
-            "rel": 10
+            "abs": 15000,
+            "rel": null
           }
         }
       ]

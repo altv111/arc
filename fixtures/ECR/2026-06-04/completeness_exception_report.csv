@@ -1,8 +1,7 @@
 trade_id,book_id,ubr_level_8,ubr_level_9,portfolio,status
-T1,B1,Europe Core Rates,Europe Linear Flow,Portfolio Rates Linear,complete
 T2,Book Linear 1,Europe Core Rates,Europe Linear Flow,Portfolio Rates Linear,riskfinder_error
 T10,Book Linear 1,Europe Core Rates,Europe Linear Flow,Portfolio Rates Linear,riskfinder_error
 T11,Book Linear 1,Europe Core Rates,Europe Linear Flow,Portfolio Rates Linear,riskfinder_error
 T3,Book Options 1,Europe Core Rates,Europe Non Linear,Portfolio Rates Options,riskfinder_error
 T7,Book Basis 1,Europe Core Rates,Europe Linear Flow,Portfolio Rates Basis,riskfinder_error
-T4,B3,US Credit,US Credit Flow,Portfolio Credit Flow,complete
+T99,Book Credit 1,US Credit,US Credit Flow,Portfolio Credit Flow,riskfinder_error

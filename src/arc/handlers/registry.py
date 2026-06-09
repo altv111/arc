@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar
 
-from arc.core.results import HandlerOutput, InputSpec, ResolvedInputs
+from arc.core.results import HandlerOutput, InputSpec, NodeResult, ResolvedInputs
 
 
 class CheckHandler(ABC):
@@ -28,7 +28,11 @@ class CheckHandler(ABC):
     def execute(self, inputs: ResolvedInputs, spec_slice: dict[str, Any]) -> HandlerOutput:
         """Same inputs must produce same output."""
 
-    def plan_inputs(self, spec_slice: dict[str, Any]) -> InputSpec:
+    def plan_inputs(
+        self,
+        spec_slice: dict[str, Any],
+        prior_results: tuple[NodeResult, ...] = (),
+    ) -> InputSpec:
         return self.input_spec
 
 

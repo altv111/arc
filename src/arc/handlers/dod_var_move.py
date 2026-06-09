@@ -4,8 +4,9 @@ from typing import Any, ClassVar
 
 from arc.clients.reporting import DodVarExtractRow
 from arc.core.context import ScopeKey
-from arc.core.results import HandlerOutput, IndeterminateError, InputSpec, NodeStatus, ResolvedInputs
+from arc.core.results import HandlerOutput, IndeterminateError, InputSpec, NodeResult, NodeStatus, ResolvedInputs
 from arc.handlers._common import (
+    breached_values_from_results,
     filter_rows_by_scope,
     group_rows_by_grain,
     row_hierarchy,
@@ -24,14 +25,22 @@ class DodVarMoveHandler(CheckHandler):
     handler_version: ClassVar[str] = "1.0.0"
     supported_check_grains: ClassVar[set[str]] = {"portfolio", "ubr_level_9"}
 
-    def plan_inputs(self, spec_slice: dict[str, Any]) -> InputSpec:
+    def plan_inputs(
+        self,
+        spec_slice: dict[str, Any],
+        prior_results: tuple[NodeResult, ...] = (),
+    ) -> InputSpec:
+        params: dict[str, Any] = {
+            "grain": spec_slice["check_grain"],
+            "var_type": "TOTAL",
+            "fields": _fields_for_run_type(str(spec_slice["__run_type"]).lower()),
+        }
+        if spec_slice["check_grain"] == "portfolio":
+            portfolios = breached_values_from_results(prior_results, "portfolio", node_type="gate")
+            params["portfolio_names"] = portfolios or "<upstream:gate_breached_portfolios>"
         return InputSpec(
             datasets={
-                DOD_VAR_EXTRACT: {
-                    "grain": spec_slice["check_grain"],
-                    "var_type": "TOTAL",
-                    "fields": _fields_for_run_type(str(spec_slice["__run_type"]).lower()),
-                }
+                DOD_VAR_EXTRACT: params
             }
         )
 

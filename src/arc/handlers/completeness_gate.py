@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, ClassVar
 
-from arc.clients.reporting import CompletenessSummaryRow
+from arc.clients.reporting import CompletenessExceptionRow, CompletenessSummaryRow
 from arc.core.context import ScopeKey
 from arc.core.results import HandlerOutput, IndeterminateError, InputSpec, NodeStatus, ResolvedInputs
 from arc.handlers._common import (
@@ -16,6 +16,7 @@ from arc.handlers._common import (
 from arc.handlers.registry import CheckHandler, register
 
 COMPLETENESS_SUMMARY = "completeness_summary"
+COMPLETENESS_EXCEPTION_REPORT = "completeness_exception_report"
 
 
 @register
@@ -27,12 +28,17 @@ class MissingTradeThresholdGateHandler(CheckHandler):
     input_spec: ClassVar[InputSpec] = InputSpec(
         datasets={
             COMPLETENESS_SUMMARY: {},
+            COMPLETENESS_EXCEPTION_REPORT: {},
         }
     )
 
     def execute(self, inputs: ResolvedInputs, spec_slice: dict[str, Any]) -> HandlerOutput:
         rows = filter_rows_by_scope(
             typed_rows(inputs, COMPLETENESS_SUMMARY, CompletenessSummaryRow),
+            spec_slice.get("check_scope") or {},
+        )
+        trade_rows = filter_rows_by_scope(
+            typed_rows(inputs, COMPLETENESS_EXCEPTION_REPORT, CompletenessExceptionRow),
             spec_slice.get("check_scope") or {},
         )
 
@@ -48,6 +54,10 @@ class MissingTradeThresholdGateHandler(CheckHandler):
         per_scope_summary: list[dict[str, Any]] = []
         breached_scopes: list[ScopeKey] = []
         missing_counts_in_breach: list[dict[str, Any]] = []
+        missing_trades_by_portfolio: dict[str, list[CompletenessExceptionRow]] = {}
+        for trade in trade_rows:
+            if trade.status != "complete":
+                missing_trades_by_portfolio.setdefault(trade.portfolio, []).append(trade)
 
         for grain_value in sorted(scopes):
             scope_rows = scopes[grain_value]
@@ -91,6 +101,15 @@ class MissingTradeThresholdGateHandler(CheckHandler):
                             "trade_count_not_received": row.trade_count_not_received,
                         }
                     )
+                for trade in missing_trades_by_portfolio.get(grain_value, []):
+                    missing_counts_in_breach.append(
+                        {
+                            "trade_id": trade.trade_id,
+                            "book_id": trade.book_id,
+                            "hierarchy": row_hierarchy(trade),
+                            "status": trade.status,
+                        }
+                    )
 
         total_missing = sum(s["missing_count"] for s in per_scope_summary)
         total_trades = sum(s["total_count"] for s in per_scope_summary)
@@ -111,6 +130,25 @@ class MissingTradeThresholdGateHandler(CheckHandler):
         if breached_scopes:
             downstream_hints["breached_scope_levels"] = [
                 s["scope_levels"] for s in per_scope_summary if s["breached"]
+            ]
+            missing_trade_ids = sorted(
+                {
+                    row["trade_id"]
+                    for row in missing_counts_in_breach
+                    if "trade_id" in row
+                }
+            )
+            downstream_hints["missing_trade_ids"] = missing_trade_ids
+            downstream_hints["missing_trades"] = [
+                {
+                    "trade_id": row["trade_id"],
+                    "hierarchy": row["hierarchy"],
+                    "status": row["status"],
+                }
+                for row in sorted(
+                    (r for r in missing_counts_in_breach if "trade_id" in r),
+                    key=lambda r: r["trade_id"],
+                )
             ]
 
         return HandlerOutput(

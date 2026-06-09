@@ -215,7 +215,7 @@ def spec_slice(node: Node) -> dict[str, Any]:
 def _datasets(node: Node) -> str:
     handler = getattr(node, "_handler")  # noqa: SLF001
     try:
-        input_spec = handler.plan_inputs(_planning_spec_for_visual(node))
+        input_spec = handler.plan_inputs(_planning_spec_for_visual(node), ())
     except IndeterminateError:
         input_spec = handler.input_spec
     datasets = [

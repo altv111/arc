@@ -25,8 +25,12 @@ class DatasetResolver:
             "completeness_summary": client.get_completeness_summary,
             "dod_var_extract": client.get_dod_var_extract,
             "mvar": client.get_mvar,
+            "tminus1_trade_mvar": client.get_tminus1_trade_mvar,
             "rf_sensi": client.get_rf_sensi,
             "kannon_sensi": client.get_kannon_sensi,
+            "trade_completeness": client.get_trade_completeness,
+            "completeness_exception_report": client.get_completeness_exception_report,
+            "kannon_trade_level_sensi": client.get_kannon_trade_level_sensi,
         }
         self._cache: dict[tuple[str, str, str, str], Any] = {}
 
@@ -57,6 +61,7 @@ class DatasetResolver:
             ds = self._cache.get(cache_key)
             if ds is None:
                 ds = _filter_dataset(fn(ctx.ba, ctx.business_date, **params), parent_scope)
+                ds = _filter_dataset_by_params(ds, params)
                 self._cache[cache_key] = ds
             data[name] = ds
             versions[name] = ds.content_hash
@@ -217,7 +222,7 @@ class Runner:
         prior_results: list[NodeResult],
         parent_scope: dict[str, list[str]],
     ) -> NodeResult:
-        input_spec = node._handler.plan_inputs(node.planning_spec(ctx))  # noqa: SLF001
+        input_spec = node._handler.plan_inputs(node.planning_spec(ctx), tuple(prior_results))  # noqa: SLF001
         resolved = self._resolver.resolve(input_spec, ctx, parent_scope)
 
         if UPSTREAM_RESULTS_KEY in input_spec.datasets:
@@ -305,6 +310,52 @@ def _filter_dataset(dataset: Any, scope: dict[str, list[str]]) -> Any:
     ]
     content_hash = json_hash({"source": dataset.content_hash, "scope": scope, "rows": payload})
     return type(dataset)(rows=tuple(filtered_rows), content_hash=content_hash)
+
+
+def _filter_dataset_by_params(dataset: Any, params: dict[str, Any]) -> Any:
+    filters = {
+        "portfolio_names": "portfolio",
+        "trade_ids": "trade_id",
+        "risk_type_list": "risk_type",
+        "sensitivity_type_list": "sensitivity_type",
+        "var_type": "var_type",
+    }
+    effective = {
+        attr: _as_allowed(params[key])
+        for key, attr in filters.items()
+        if key in params and _as_allowed(params[key])
+    }
+    if not effective:
+        return dataset
+
+    filtered_rows = []
+    for row in dataset.rows:
+        keep = True
+        for attr, allowed in effective.items():
+            if not hasattr(row, attr):
+                continue
+            if getattr(row, attr) not in allowed:
+                keep = False
+                break
+        if keep:
+            filtered_rows.append(row)
+
+    payload = [
+        row.model_dump(mode="json") if hasattr(row, "model_dump") else row
+        for row in filtered_rows
+    ]
+    content_hash = json_hash({"source": dataset.content_hash, "params": params, "rows": payload})
+    return type(dataset)(rows=tuple(filtered_rows), content_hash=content_hash)
+
+
+def _as_allowed(value: Any) -> set[Any]:
+    if value is None:
+        return set()
+    if isinstance(value, str):
+        return {value}
+    if isinstance(value, (list, tuple, set)):
+        return set(value)
+    return {value}
 
 
 def _row_matches_scope(row: Any, scope: dict[str, list[str]]) -> bool:
