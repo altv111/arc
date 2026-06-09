@@ -8,7 +8,13 @@ import arc.handlers  # noqa: F401 - import-time registration
 from arc.core.evidence_store import EvidenceStore
 from arc.core.run_state import RunStateStore
 from arc.rule import build_rule_from_json
-from arc.visualize import render_rule_mermaid, render_rule_plan, render_rule_rich, render_rule_text
+from arc.visualize import (
+    render_dataset_contract,
+    render_rule_mermaid,
+    render_rule_plan,
+    render_rule_rich,
+    render_rule_text,
+)
 
 
 def main() -> None:
@@ -21,7 +27,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--format",
-        choices=("rich", "mermaid", "plan", "text"),
+        choices=("rich", "mermaid", "plan", "text", "datasets"),
         default="rich",
         help="Output format.",
     )
@@ -37,6 +43,8 @@ def main() -> None:
 
     if args.format == "rich":
         print(render_rule_rich(rule), end="")
+    elif args.format == "datasets":
+        print(render_dataset_contract(rule))
     elif args.format == "plan":
         print(render_rule_plan(rule))
     elif args.format == "text":

@@ -15,14 +15,13 @@ class DecideCorrectionHandler(CheckHandler):
     input_spec: ClassVar[InputSpec] = InputSpec(datasets={UPSTREAM_RESULTS_KEY: {}})
 
     def execute(self, inputs: ResolvedInputs, spec_slice: dict[str, Any]) -> HandlerOutput:
-        options = tuple(spec_slice.get("decision_options") or ())
-        decision = "fill_from_yesterday" if "fill_from_yesterday" in options else (options[0] if options else "hold_recheck")
+        # Temporary placeholder policy: row1 always rolls until user-validated decision rules are specified.
+        decision = "roll"
 
         attributed = []
         for result in upstream_results(inputs):
-            if result.check_id == "attribute_completeness_drilldown":
-                attributed = list(result.downstream_hints.get("attributed_breaches") or [])
-                break
+            if result.node_type == "attribute":
+                attributed.extend(result.downstream_hints.get("attributed_breaches") or [])
 
         decisions = [
             {
@@ -30,6 +29,7 @@ class DecideCorrectionHandler(CheckHandler):
                 "source_node_id": item["node_id"],
                 "check_id": item["check_id"],
                 "breached_scope_levels": item["breached_scope_levels"],
+                "policy": "placeholder_always_roll",
             }
             for item in attributed
         ]
@@ -37,6 +37,12 @@ class DecideCorrectionHandler(CheckHandler):
         return HandlerOutput(
             status=NodeStatus.PASS,
             metrics={"n_decisions": len(decisions)},
-            evidence_payloads={"decisions": {"items": decisions}},
+            evidence_payloads={
+                "decisions": {
+                    "policy": "placeholder_always_roll",
+                    "todo": "Replace with user-validated policy using attribution, history, and decision options.",
+                    "items": decisions,
+                }
+            },
             downstream_hints={"decisions": decisions},
         )

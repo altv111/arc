@@ -15,6 +15,7 @@ from rich.text import Text
 from rich.tree import Tree
 
 LANES = ("gate", "evaluate", "attribute", "decide", "act", "record")
+INTERNAL_DATASETS = frozenset({"_upstream_results"})
 
 
 def render_rule_mermaid(rule: Rule) -> str:
@@ -132,7 +133,54 @@ def render_rule_plan(rule: Rule) -> str:
     lines.append("---------")
     for source, target in compute_edges(rule):
         lines.append(f"{source.node_id} -> {target.node_id}")
+    lines.extend(["", *render_dataset_contract_lines(rule)])
     return "\n".join(lines)
+
+
+def render_dataset_contract(rule: Rule) -> str:
+    return "\n".join(render_dataset_contract_lines(rule))
+
+
+def render_dataset_contract_lines(rule: Rule) -> list[str]:
+    entries = dataset_contract(rule)
+    lines = [
+        "Dataset contract",
+        "----------------",
+        "Scope: parent_scope is applied centrally before handler evaluation.",
+    ]
+    if not entries:
+        lines.append("(no external reporting datasets required)")
+        return lines
+
+    for entry in entries:
+        lines.append(f"- {entry['dataset']}")
+        lines.append(f"  requested_by: {', '.join(entry['requested_by'])}")
+        lines.append(f"  params      : {_short_dict(entry['params']) if entry['params'] else '{}'}")
+    return lines
+
+
+def dataset_contract(rule: Rule) -> list[dict[str, Any]]:
+    grouped: dict[tuple[str, str], dict[str, Any]] = {}
+    for node in rule.nodes:
+        input_spec = _input_spec_for_node(node)
+        for dataset, params in input_spec.datasets.items():
+            if dataset in INTERNAL_DATASETS:
+                continue
+            key = (dataset, _short_dict(params))
+            entry = grouped.setdefault(
+                key,
+                {
+                    "dataset": dataset,
+                    "params": dict(params),
+                    "requested_by": [],
+                },
+            )
+            entry["requested_by"].append(node.node_id)
+
+    return sorted(
+        grouped.values(),
+        key=lambda item: (item["dataset"], _short_dict(item["params"])),
+    )
 
 
 def render_rule_rich(rule: Rule, *, width: int = 120) -> str:
@@ -213,16 +261,20 @@ def spec_slice(node: Node) -> dict[str, Any]:
 
 
 def _datasets(node: Node) -> str:
-    handler = getattr(node, "_handler")  # noqa: SLF001
-    try:
-        input_spec = handler.plan_inputs(_planning_spec_for_visual(node), ())
-    except IndeterminateError:
-        input_spec = handler.input_spec
+    input_spec = _input_spec_for_node(node)
     datasets = [
         _dataset_label(name, input_spec.datasets[name])
         for name in sorted((input_spec.datasets or {}).keys())
     ]
     return ", ".join(datasets) if datasets else "(none)"
+
+
+def _input_spec_for_node(node: Node):
+    handler = getattr(node, "_handler")  # noqa: SLF001
+    try:
+        return handler.plan_inputs(_planning_spec_for_visual(node), ())
+    except IndeterminateError:
+        return handler.input_spec
 
 
 def _planning_spec_for_visual(node: Node) -> dict[str, Any]:

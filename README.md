@@ -15,6 +15,9 @@ Handlers remain pure compute components. Nodes and the runner own orchestration,
 input resolution, idempotency, evidence, run-state persistence, and correction
 client submission.
 
+For a business-to-technical walkthrough of the row1 completeness workflow and
+the future agentic investigation path, see `docs/justin_workflow_mapping.md`.
+
 ## Rule Flow
 
 `fixtures/rules/row1.json` describes one rule family row:
@@ -32,9 +35,9 @@ When `build_rule_from_json(...)` runs, row1 becomes:
 ```text
 gate:missing_trade_threshold_gate:0
 evaluate:dod_var_move:0
-evaluate:mvar:0
-evaluate:mvar:1
-attribute
+evaluate:trade_level_tminus1_mvar_mat:0
+evaluate:trade_level_kannon_sensi_mat:0
+attribute:attribute_missing_trades:0
 decide
 act
 record
@@ -60,7 +63,10 @@ The correction chain runs only if at least one evaluate node fails.
 
 ## Visualizing Rule Paths
 
-You can render the lanes and compute/decision paths without executing handlers:
+You can render the lanes and compute/decision paths without executing handlers.
+All examples below use row1:
+
+Default rich terminal view:
 
 ```bash
 ./env/bin/python -m arc.cli.visualize_rule fixtures/rules/row1.json
@@ -77,10 +83,22 @@ The default `rich` view is a colorized terminal demo view. It shows:
 - decision/act/record outputs
 - a tree of compute and decision paths
 
-For a plain text fallback:
+Explicit rich terminal view:
+
+```bash
+./env/bin/python -m arc.cli.visualize_rule fixtures/rules/row1.json --format rich
+```
+
+Detailed plan view:
 
 ```bash
 ./env/bin/python -m arc.cli.visualize_rule fixtures/rules/row1.json --format plan
+```
+
+Dataset contract for the reporting stream:
+
+```bash
+./env/bin/python -m arc.cli.visualize_rule fixtures/rules/row1.json --format datasets
 ```
 
 For Mermaid swimlanes:
@@ -103,6 +121,12 @@ For terminal-friendly output:
 
 ```bash
 ./env/bin/python -m arc.cli.visualize_rule fixtures/rules/row1.json --format text
+```
+
+Supported visualization formats are:
+
+```text
+rich | plan | datasets | mermaid | text
 ```
 
 ## Node Responsibilities

@@ -14,7 +14,7 @@ from arc.handlers.registry import HANDLERS
 from arc.nodes.base import compute_idempotency_key
 from arc.rule import build_rule, build_rule_from_json
 from arc.runner import Runner
-from arc.visualize import render_rule_mermaid, render_rule_plan, render_rule_rich
+from arc.visualize import dataset_contract, render_dataset_contract, render_rule_mermaid, render_rule_plan, render_rule_rich
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -48,7 +48,7 @@ def test_rule_builder_expands_one_node_per_check_row(tmp_path):
         "evaluate:dod_var_move:0",
         "evaluate:trade_level_tminus1_mvar_mat:0",
         "evaluate:trade_level_kannon_sensi_mat:0",
-        "attribute",
+        "attribute:attribute_missing_trades:0",
         "decide",
         "act",
         "record",
@@ -69,8 +69,8 @@ def test_rule_visualization_renders_swimlane_paths(tmp_path):
     assert "subgraph evaluate[evaluate]" in rendered
     assert "subgraph attribute[attribute]" in rendered
     assert "n_gate_missing_trade_threshold_gate_0 --> n_evaluate_dod_var_move_0" in rendered
-    assert "n_evaluate_trade_level_tminus1_mvar_mat_0 --> n_attribute" in rendered
-    assert "n_attribute --> n_decide" in rendered
+    assert "n_evaluate_trade_level_tminus1_mvar_mat_0 --> n_attribute_attribute_missing_trades_0" in rendered
+    assert "n_attribute_attribute_missing_trades_0 --> n_decide" in rendered
     assert "n_decide --> n_act" in rendered
     assert "n_act --> n_record" in rendered
 
@@ -94,6 +94,9 @@ def test_rule_plan_view_includes_datasets_and_decision_path(tmp_path):
     assert "kannon_trade_level_sensi(trade_ids=<upstream:missing_trade_ids>; risk_type_list=abc; sensitivity_type_list=Delta)" in rendered
     assert "emits      : correction decisions" in rendered
     assert "emits      : correction intents + correction receipt" in rendered
+    assert "Dataset contract" in rendered
+    assert "- completeness_summary" in rendered
+    assert "- tminus1_trade_mvar" in rendered
 
 
 def test_rule_rich_view_includes_ansi_demo_plan(tmp_path):
@@ -109,8 +112,33 @@ def test_rule_rich_view_includes_ansi_demo_plan(tmp_path):
     assert "\x1b[" in rendered
     assert "ARC Rule Plan | Rule 1: Completeness" in rendered
     assert "gate:missing_trade_threshold_gate:0" in rendered
+    assert "attribute:attribute_missing_trades:0" in rendered
     assert "dod_var_extract" in rendered
     assert "Compute and decision paths" in rendered
+
+
+def test_dataset_contract_lists_reporting_requirements(tmp_path):
+    evidence_store, run_state_store = _stores(tmp_path)
+    rule = build_rule_from_json(
+        REPO_ROOT / "fixtures" / "rules" / "row1.json",
+        evidence_store=evidence_store,
+        run_state_store=run_state_store,
+    )
+
+    contract = dataset_contract(rule)
+    rendered = render_dataset_contract(rule)
+
+    assert [entry["dataset"] for entry in contract] == [
+        "completeness_exception_report",
+        "completeness_summary",
+        "dod_var_extract",
+        "kannon_trade_level_sensi",
+        "tminus1_trade_mvar",
+    ]
+    assert "_upstream_results" not in rendered
+    assert "parent_scope is applied centrally" in rendered
+    assert "portfolio_names=<upstream:gate_breached_portfolios>" in rendered
+    assert "trade_ids=<upstream:missing_trade_ids>" in rendered
 
 
 def test_check_grain_mismatch_fails_fast(tmp_path):
@@ -193,13 +221,25 @@ def test_row1_run_applies_parent_and_check_scopes(tmp_path):
         "Portfolio Rates Options",
     }
 
+    attribute = next(result for result in report.results if result.node_id == "attribute:attribute_missing_trades:0")
+    assert attribute.metrics["n_portfolios_classified"] == 3
+    assert attribute.metrics["n_material_portfolios"] == 2
+    assert {
+        row["portfolio"]: row["root_cause"]
+        for row in attribute.downstream_hints["classifications"]
+    } == {
+        "Portfolio Rates Basis": "riskfinder_error",
+        "Portfolio Rates Linear": "riskfinder_error",
+        "Portfolio Rates Options": "riskfinder_error",
+    }
+
     record = next(result for result in report.results if result.node_id == "record")
-    assert record.metrics["n_correction_intents"] == 3
+    assert record.metrics["n_correction_intents"] == 2
     act = next(result for result in report.results if result.node_id == "act")
     assert act.metrics["n_correction_receipts"] == 1
     assert act.downstream_hints["correction_receipt"]["client"] == "ShadowCorrectionClient"
     assert act.downstream_hints["correction_receipt"]["mutation_performed"] is False
-    assert act.downstream_hints["correction_receipt"]["n_intents"] == 3
+    assert act.downstream_hints["correction_receipt"]["n_intents"] == 2
     assert (tmp_path / "runs" / "row1-test" / "run.json").exists()
 
 

@@ -26,6 +26,14 @@ class ImpactCheckSpec(BaseModel):
     rows: list[dict[str, Any]] = Field(default_factory=list)
 
 
+class AttributionCheckSpec(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    check_id: str = Field(min_length=1)
+    classifier: str = Field(min_length=1)
+    rows: list[dict[str, Any]] = Field(default_factory=list)
+
+
 class EvaluationPolicy(BaseModel):
     model_config = ConfigDict(extra="allow")
 
@@ -46,6 +54,7 @@ class RuleSpec(BaseModel):
     evaluation_policy: EvaluationPolicy = Field(default_factory=EvaluationPolicy)
     decision_options: list[str] = Field(default_factory=list)
     correction_mapping_ref: str | None = None
+    attribution_checks: list[AttributionCheckSpec] = Field(default_factory=list)
 
     attribute_handler: str | None = None
     decide_handler: str | None = None
@@ -107,18 +116,30 @@ def build_rule(
     for ic in evals:
         nodes.extend(_check_nodes(EvaluateNode, rule_spec.row_id, ic, evidence_store, run_state_store))
 
-    attribute = _handler_or_noop(rule_spec.attribute_handler)
-    nodes.append(
-        AttributeNode(
-            rule_id=rule_spec.row_id,
-            node_id="attribute",
-            check_id=attribute.check_id,
-            spec_slice={"parent_scope": rule_spec.parent_scope},
-            handler=attribute,
-            evidence_store=evidence_store,
-            run_state_store=run_state_store,
+    if rule_spec.attribution_checks:
+        for ac in rule_spec.attribution_checks:
+            nodes.extend(
+                _attribute_nodes(
+                    rule_spec.row_id,
+                    rule_spec.parent_scope,
+                    ac,
+                    evidence_store,
+                    run_state_store,
+                )
+            )
+    else:
+        attribute = _handler_or_noop(rule_spec.attribute_handler)
+        nodes.append(
+            AttributeNode(
+                rule_id=rule_spec.row_id,
+                node_id="attribute",
+                check_id=attribute.check_id,
+                spec_slice={"parent_scope": rule_spec.parent_scope},
+                handler=attribute,
+                evidence_store=evidence_store,
+                run_state_store=run_state_store,
+            )
         )
-    )
     decide = _handler_or_noop(rule_spec.decide_handler)
     nodes.append(
         DecideNode(
@@ -216,6 +237,43 @@ def _check_nodes(
                 rule_id=row_id,
                 node_id=f"{ic.mode}:{ic.check_id}:{index}",
                 check_id=ic.check_id,
+                spec_slice=spec_slice,
+                handler=handler,
+                evidence_store=evidence_store,
+                run_state_store=run_state_store,
+            )
+        )
+    return nodes
+
+
+def _attribute_nodes(
+    row_id: int,
+    parent_scope: dict[str, list[str]],
+    ac: AttributionCheckSpec,
+    evidence_store: EvidenceStore,
+    run_state_store: RunStateStore,
+) -> list[Node]:
+    try:
+        handler = HANDLERS[ac.check_id]
+    except KeyError as exc:
+        raise KeyError(f"row {row_id}: no handler registered for attribution check_id={ac.check_id!r}") from exc
+
+    rows = ac.rows or [{}]
+    nodes: list[Node] = []
+    check_payload = ac.model_dump(exclude={"rows"}, mode="json")
+    for index, row in enumerate(rows):
+        spec_slice = {
+            "parent_scope": parent_scope,
+            **check_payload,
+            "row_index": index,
+            "row_id": f"{ac.check_id}:{index}",
+            **row,
+        }
+        nodes.append(
+            AttributeNode(
+                rule_id=row_id,
+                node_id=f"attribute:{ac.check_id}:{index}",
+                check_id=ac.check_id,
                 spec_slice=spec_slice,
                 handler=handler,
                 evidence_store=evidence_store,

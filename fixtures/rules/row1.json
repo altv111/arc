@@ -106,7 +106,21 @@
 
   "correction_mapping_ref": "breached_scope_to_correct_scope_v1",
 
-  "attribute_handler": "attribute_completeness_drilldown",
+  "attribution_checks": [
+    {
+      "check_id": "attribute_missing_trades",
+      "classifier": "missing_trades",
+      "rows": [
+        {
+          "source_check_ids": [
+            "missing_trade_threshold_gate",
+            "trade_level_tminus1_mvar_mat",
+            "trade_level_kannon_sensi_mat"
+          ]
+        }
+      ]
+    }
+  ],
 
   "decide_handler": "decide_correction",
 
