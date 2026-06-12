@@ -1,0 +1,7 @@
+Region,UBR Level 8 Name,UBR Level 9 Name,Portfolio Name,Trader Book Name,trade_id,present_in_upstream
+,Europe Core Rates,Europe Linear Flow,Portfolio Rates Linear,Book Linear 1,T2,true
+,Europe Core Rates,Europe Linear Flow,Portfolio Rates Linear,Book Linear 1,T10,true
+,Europe Core Rates,Europe Linear Flow,Portfolio Rates Linear,Book Linear 1,T11,true
+,Europe Core Rates,Europe Non Linear,Portfolio Rates Options,Book Options 1,T3,true
+,Europe Core Rates,Europe Linear Flow,Portfolio Rates Basis,Book Basis 1,T7,true
+,US Credit,US Credit Flow,Portfolio Credit Flow,Book Credit 1,T99,false

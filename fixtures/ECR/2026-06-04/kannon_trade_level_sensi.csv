@@ -1,8 +1,8 @@
-cobdate,trade_id,risktype,sensitivitytype,amount(eur)
-2026-06-04,T2,abc,Delta,20000
-2026-06-04,T10,abc,Delta,5000
-2026-06-04,T11,abc,Delta,0
-2026-06-04,T3,abc,Delta,40000
-2026-06-04,T7,abc,Delta,12000
-2026-06-04,T5,abc,Delta,40000
-2026-06-04,T2,xyz,Delta,5000
+Region,UBR Level 8 Name,UBR Level 9 Name,Portfolio Name,Trader Book Name,cobdate,trade_id,risktype,sensitivitytype,amount(eur)
+,Europe Core Rates,Europe Linear Flow,Portfolio Rates Linear,Book Linear 1,2026-06-04,T2,abc,Delta,20000
+,Europe Core Rates,Europe Linear Flow,Portfolio Rates Linear,Book Linear 1,2026-06-04,T10,abc,Delta,5000
+,Europe Core Rates,Europe Linear Flow,Portfolio Rates Linear,Book Linear 1,2026-06-04,T11,abc,Delta,0
+,Europe Core Rates,Europe Non Linear,Portfolio Rates Options,Book Options 1,2026-06-04,T3,abc,Delta,40000
+,Europe Core Rates,Europe Linear Flow,Portfolio Rates Basis,Book Basis 1,2026-06-04,T7,abc,Delta,12000
+,,,,,2026-06-04,T5,abc,Delta,40000
+,Europe Core Rates,Europe Linear Flow,Portfolio Rates Linear,Book Linear 1,2026-06-04,T2,xyz,Delta,5000

@@ -17,6 +17,7 @@ client submission.
 
 For a business-to-technical walkthrough of the row1 completeness workflow and
 the future agentic investigation path, see `docs/justin_workflow_mapping.md`.
+For the living implementation backlog, see `docs/todo.md`.
 
 ## Rule Flow
 
@@ -101,6 +102,12 @@ Dataset contract for the reporting stream:
 ./env/bin/python -m arc.cli.visualize_rule fixtures/rules/row1.json --format datasets
 ```
 
+Machine-readable dataset contract:
+
+```bash
+./env/bin/python -m arc.cli.visualize_rule fixtures/rules/row1.json --format datasets-json
+```
+
 For Mermaid swimlanes:
 
 ```bash
@@ -126,7 +133,7 @@ For terminal-friendly output:
 Supported visualization formats are:
 
 ```text
-rich | plan | datasets | mermaid | text
+rich | plan | datasets | datasets-json | mermaid | text
 ```
 
 ## Node Responsibilities
@@ -200,6 +207,32 @@ Install dev dependencies:
 ```bash
 python3 -m venv env
 ./env/bin/pip install -e '.[dev]'
+```
+
+Run the default row1 fixture:
+
+```bash
+./env/bin/python -m arc.cli.run_ba
+```
+
+Run the MD demo SNAPs:
+
+```bash
+./env/bin/python -m arc.cli.run_ba \
+  --rule fixtures/rules/row1_japan.json \
+  --fixtures fixtures/demo/ECR/japan/2026-06-04 \
+  --snapshot-id ECR-JAPAN-SNAP-2026-06-04 \
+  --run-id demo-japan \
+  --artifacts /tmp/arc-demo-japan \
+  --summary
+
+./env/bin/python -m arc.cli.run_ba \
+  --rule fixtures/rules/row1_global.json \
+  --fixtures fixtures/demo/ECR/global/2026-06-04 \
+  --snapshot-id ECR-GLOBAL-SNAP-2026-06-04 \
+  --run-id demo-global \
+  --artifacts /tmp/arc-demo-global \
+  --summary
 ```
 
 Run tests and lint:

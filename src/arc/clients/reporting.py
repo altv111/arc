@@ -7,7 +7,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 @dataclass(frozen=True)
@@ -20,6 +20,7 @@ class CompletenessSummaryRow(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     cobdate: date
+    region: str | None = Field(default=None, validation_alias=AliasChoices("Region", "region"))
     ubr_level_8: str = Field(validation_alias="UBR Level 8 Name")
     ubr_level_8_id: str = Field(validation_alias="UBR Level 8 ID")
     ubr_level_9: str = Field(validation_alias="UBR Level 9 Name")
@@ -39,6 +40,7 @@ class CompletenessSummaryRow(BaseModel):
 
 class TradeCompletenessRow(BaseModel):
     trade_id: str
+    region: str | None = None
     book_id: str
     ubr_level_8: str
     ubr_level_9: str
@@ -48,6 +50,7 @@ class TradeCompletenessRow(BaseModel):
 
 class CompletenessExceptionRow(BaseModel):
     trade_id: str
+    region: str | None = None
     book_id: str
     ubr_level_8: str
     ubr_level_9: str
@@ -57,6 +60,7 @@ class CompletenessExceptionRow(BaseModel):
 
 class BookCompletenessRow(BaseModel):
     book_id: str
+    region: str | None = None
     ubr_level_8: str
     ubr_level_9: str
     portfolio: str
@@ -64,6 +68,7 @@ class BookCompletenessRow(BaseModel):
 
 class MVarRow(BaseModel):
     book_id: str
+    region: str | None = None
     ubr_level_8: str
     ubr_level_9: str
     portfolio: str
@@ -75,6 +80,11 @@ class TMinus1TradeMVarRow(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     cobdate: date
+    region: str | None = Field(default=None, validation_alias=AliasChoices("Region", "region"))
+    ubr_level_8: str | None = Field(default=None, validation_alias=AliasChoices("UBR Level 8 Name", "ubr_level_8"))
+    ubr_level_9: str | None = Field(default=None, validation_alias=AliasChoices("UBR Level 9 Name", "ubr_level_9"))
+    portfolio: str | None = Field(default=None, validation_alias=AliasChoices("Portfolio Name", "portfolio"))
+    book_id: str | None = Field(default=None, validation_alias=AliasChoices("Trader Book Name", "book_id"))
     trade_id: str
     t_minus_1_mvar_eur: float = Field(validation_alias="t_minus_1_mvar_eur")
 
@@ -83,6 +93,7 @@ class DodVarExtractRow(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     var_type: str = Field(validation_alias="VARType")
+    region: str | None = Field(default=None, validation_alias=AliasChoices("Region", "region"))
     ubr_level_8: str = Field(validation_alias="UBR Level 8 Name")
     ubr_level_9: str = Field(validation_alias="UBR Level 9 Name")
     portfolio: str = Field(validation_alias="Portfolio Name")
@@ -102,6 +113,7 @@ class SensiRow(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     cobdate: date
+    region: str | None = Field(default=None, validation_alias=AliasChoices("Region", "region"))
     methodology: str
     portfolio: str = Field(validation_alias="portfolio_name")
     ubr_level_8: str = Field(validation_alias="UBR Name Level 08")
@@ -117,10 +129,47 @@ class KannonTradeLevelSensiRow(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     cobdate: date
+    region: str | None = Field(default=None, validation_alias=AliasChoices("Region", "region"))
+    ubr_level_8: str | None = Field(default=None, validation_alias=AliasChoices("UBR Level 8 Name", "ubr_level_8"))
+    ubr_level_9: str | None = Field(default=None, validation_alias=AliasChoices("UBR Level 9 Name", "ubr_level_9"))
+    portfolio: str | None = Field(default=None, validation_alias=AliasChoices("Portfolio Name", "portfolio"))
+    book_id: str | None = Field(default=None, validation_alias=AliasChoices("Trader Book Name", "book_id"))
     trade_id: str
     risk_type: str = Field(validation_alias="risktype")
     sensitivity_type: str = Field(validation_alias="sensitivitytype")
     amount_eur: float = Field(validation_alias="amount(eur)")
+
+
+class RiskfinderCalcStatusRow(BaseModel):
+    region: str | None = Field(default=None, validation_alias=AliasChoices("Region", "region"))
+    ubr_level_8: str | None = Field(default=None, validation_alias=AliasChoices("UBR Level 8 Name", "ubr_level_8"))
+    ubr_level_9: str | None = Field(default=None, validation_alias=AliasChoices("UBR Level 9 Name", "ubr_level_9"))
+    portfolio: str | None = Field(default=None, validation_alias=AliasChoices("Portfolio Name", "portfolio"))
+    book_id: str | None = Field(default=None, validation_alias=AliasChoices("Trader Book Name", "book_id"))
+    trade_id: str
+    status: str
+
+
+class HistoricalTradeStatusRow(BaseModel):
+    region: str | None = Field(default=None, validation_alias=AliasChoices("Region", "region"))
+    ubr_level_8: str | None = Field(default=None, validation_alias=AliasChoices("UBR Level 8 Name", "ubr_level_8"))
+    ubr_level_9: str | None = Field(default=None, validation_alias=AliasChoices("UBR Level 9 Name", "ubr_level_9"))
+    portfolio: str | None = Field(default=None, validation_alias=AliasChoices("Portfolio Name", "portfolio"))
+    book_id: str | None = Field(default=None, validation_alias=AliasChoices("Trader Book Name", "book_id"))
+    trade_id: str
+    historically_arrives_late: bool
+    was_missing_yesterday: bool
+    expected_arrival_time_ist: str | None = None
+
+
+class UpstreamTradePresenceRow(BaseModel):
+    region: str | None = Field(default=None, validation_alias=AliasChoices("Region", "region"))
+    ubr_level_8: str | None = Field(default=None, validation_alias=AliasChoices("UBR Level 8 Name", "ubr_level_8"))
+    ubr_level_9: str | None = Field(default=None, validation_alias=AliasChoices("UBR Level 9 Name", "ubr_level_9"))
+    portfolio: str | None = Field(default=None, validation_alias=AliasChoices("Portfolio Name", "portfolio"))
+    book_id: str | None = Field(default=None, validation_alias=AliasChoices("Trader Book Name", "book_id"))
+    trade_id: str
+    present_in_upstream: bool
 
 
 @runtime_checkable
@@ -150,6 +199,15 @@ class ReportingClient(Protocol):
         ...
 
     def get_kannon_trade_level_sensi(self, ba: str, business_date: date, **params: Any) -> Dataset:
+        ...
+
+    def get_riskfinder_calc_status(self, ba: str, business_date: date, **params: Any) -> Dataset:
+        ...
+
+    def get_historical_trade_status(self, ba: str, business_date: date, **params: Any) -> Dataset:
+        ...
+
+    def get_upstream_trade_presence(self, ba: str, business_date: date, **params: Any) -> Dataset:
         ...
 
 
@@ -195,6 +253,15 @@ class CSVReportingClient:
 
     def get_kannon_trade_level_sensi(self, ba: str, business_date: date, **params: Any) -> Dataset:
         return self._read_csv("kannon_trade_level_sensi.csv", KannonTradeLevelSensiRow)
+
+    def get_riskfinder_calc_status(self, ba: str, business_date: date, **params: Any) -> Dataset:
+        return self._read_csv("stubs/riskfinder_calc_status.csv", RiskfinderCalcStatusRow)
+
+    def get_historical_trade_status(self, ba: str, business_date: date, **params: Any) -> Dataset:
+        return self._read_csv("stubs/historical_trade_status.csv", HistoricalTradeStatusRow)
+
+    def get_upstream_trade_presence(self, ba: str, business_date: date, **params: Any) -> Dataset:
+        return self._read_csv("stubs/upstream_trade_presence.csv", UpstreamTradePresenceRow)
 
 
 def _safe_grain(grain: Any) -> str:

@@ -192,19 +192,54 @@ Possible tools:
   - tells whether trades failed in RiskFinder, never arrived, or are still
     pending
 - `get_completeness_exception_report(trade_ids)`
-  - confirms missing statuses and hierarchy
-- `get_kannon_trade_presence(trade_ids)`
-  - tells whether the same trades are present in Kannon
-- `get_tminus1_trade_mvar(trade_ids)`
-  - confirms whether the trades existed yesterday and had material risk
+  - confirms missing statuses and hierarchy; in deterministic ARC this should
+    usually be reused from the gate's already-fetched exception report rather
+    than fetched again
+- `get_upstream_trade_presence(trade_ids)`
+  - tells whether the same trades are present in upstream systems such as
+    Kannon; for row1 this can be derived from the already-fetched
+    `kannon_trade_level_sensi` evaluate input
+- `check_historical_trade_status(trade_ids, lookback_days)`
+  - checks whether trades were missing yesterday or historically arrived late;
+    this may reuse T-1 MVAR, yesterday's completeness exception report, or ARC's
+    own prior breach records
 - `get_historical_roll_records(portfolios, lookback_days)`
   - checks continuous roll count
 - `get_historical_missing_trade_records(trade_ids, portfolios, lookback_days)`
   - checks whether this is recurring
 - `get_regional_holiday_calendar(region, date)`
-  - checks holiday candidate root causes
+  - checks holiday candidate root causes; useful as a stub initially but not
+    required by row1 attribution
 - `search_prior_incidents(portfolios, systems, date_range)`
-  - retrieves similar operational incidents
+  - retrieves similar operational incidents; for missing trades this should
+    probably search by trade or historical ARC record before broad portfolio
+    search
+
+Deterministic handlers should prefer evidence already present in upstream node
+results before asking reporting/tool layers for more data. LangGraph/ReAct loops
+can use the same tool names later, but the first implementation can back them
+with fixture CSVs and deterministic lookups.
+
+Initial missing-trade attribution policy:
+
+```text
+1. Check RiskFinder calc status.
+2. If status is errored:
+   - classify as arrived_but_errored
+   - attribution can stop deterministically
+   - an agent may optionally search prior incidents for recurrence context
+3. If status is successful:
+   - emit defect: green RiskFinder status should not coexist with missing trade
+4. If status is not_arrived:
+   - check upstream trade presence
+   - check historical arrival behavior
+   - if present upstream and historically arrives late: hold and recheck
+   - if present upstream but does not historically arrive late: defect
+   - if missing upstream: classify as missing_in_upstream defect
+5. If status is pending:
+   - classify as expected_to_arrive_late when supported by historical arrival
+     behavior; otherwise defect or manual review
+```
 
 Expected structured output:
 
@@ -212,7 +247,7 @@ Expected structured output:
 {
   "classifier": "missing_trades",
   "portfolio": "Portfolio Rates Linear",
-  "root_cause": "riskfinder_error",
+  "root_cause": "arrived_but_errored",
   "late_arrival_possible": false,
   "seen_in_kannon": true,
   "seen_t_minus_1": true,
@@ -221,6 +256,35 @@ Expected structured output:
   "evidence": []
 }
 ```
+
+## Future Lane: Recheck
+
+Some attribution outcomes imply a time-delayed action. For example, a trade that
+has not arrived in the morning but historically arrives late may lead to `hold`
+or temporary correction. Later in the day, including post-flash, ARC should be
+able to recheck whether the trade arrived.
+
+This is a future lane, not part of row1 execution today:
+
+```text
+recorded missing trades + prior corrective action
+-> recheck
+-> decide whether to undo, fill_from_live, continue hold, or escalate
+```
+
+Possible future handlers:
+
+- `missing_trade_recheck`
+  - inputs: original missing trades, prior attribution, prior correction action,
+    current live/exception status
+  - output: resolved trades, still-missing trades, changed correction target
+- `decide_recheck_correction`
+  - inputs: recheck result and prior action
+  - output: undo roll, fill from live, continue hold, or escalate
+
+This matters because pre-flash and post-flash are one operational process. A
+trade can be missing in the early snap, corrected or held, then arrive later and
+require an undo/fill-from-live action.
 
 ## Pre-Flash Agentic Use Case: Decide Correction
 

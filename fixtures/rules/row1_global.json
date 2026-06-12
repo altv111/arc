@@ -1,0 +1,128 @@
+{
+  "row_id": 1,
+  "breach": "Completeness",
+  "status": "enabled",
+  "applicable_to": [
+    "ECR",
+    "ACR",
+    "GEM",
+    "FIC APAC",
+    "Credit",
+    "GFX"
+  ],
+  "parent_scope": {
+    "ubr_level_8": [
+      "Europe Core Rates"
+    ]
+  },
+  "impact_checks": [
+    {
+      "check_id": "missing_trade_threshold_gate",
+      "metric": "missing_trade_threshold",
+      "mode": "gate",
+      "check_grain": "portfolio",
+      "on_breach": "continue",
+      "rows": [
+        {
+          "check_scope": {
+            "ubr_level_9": [
+              "Europe Linear Flow",
+              "Europe Non Linear"
+            ]
+          },
+          "breach_level": "portfolio",
+          "threshold": {
+            "abs": 1000,
+            "rel": 2
+          }
+        }
+      ]
+    },
+    {
+      "check_id": "dod_var_move",
+      "metric": "DoD_VaR_Move",
+      "mode": "evaluate",
+      "check_grain": "portfolio",
+      "rows": [
+        {
+          "check_scope": {},
+          "breach_level": "portfolio",
+          "threshold": {
+            "abs": 50000,
+            "rel": 15
+          }
+        }
+      ]
+    },
+    {
+      "check_id": "trade_level_tminus1_mvar_mat",
+      "metric": "TMinus1_MVAR_Materiality",
+      "mode": "evaluate",
+      "check_grain": "trade_id",
+      "rows": [
+        {
+          "check_scope": {},
+          "breach_level": "portfolio",
+          "threshold": {
+            "abs": 15000,
+            "rel": null
+          }
+        }
+      ]
+    },
+    {
+      "check_id": "trade_level_kannon_sensi_mat",
+      "metric": "Kannon_Sensi_Materiality",
+      "mode": "evaluate",
+      "check_grain": "trade_id",
+      "rows": [
+        {
+          "check_scope": {},
+          "breach_level": "portfolio",
+          "risk_type_list": [
+            "abc"
+          ],
+          "sensitivity_type_list": [
+            "Delta"
+          ],
+          "threshold": {
+            "abs": 15000,
+            "rel": null
+          }
+        }
+      ]
+    }
+  ],
+  "correction_mapping_ref": "breached_scope_to_correct_scope_v1",
+  "attribution_checks": [
+    {
+      "check_id": "attribute_missing_trades",
+      "classifier": "missing_trades",
+      "rows": [
+        {
+          "source_check_ids": [
+            "missing_trade_threshold_gate",
+            "trade_level_tminus1_mvar_mat",
+            "trade_level_kannon_sensi_mat"
+          ]
+        }
+      ]
+    }
+  ],
+  "decide_handler": "decide_correction",
+  "act_handler": "act_correction",
+  "act_mode": "shadow",
+  "record_handler": "record_breach",
+  "evaluation_policy": {
+    "gate_logic": "run_evaluates_only_if_any_gate_breaches",
+    "evaluate_logic": "all_applicable_evaluates"
+  },
+  "decision_options": [
+    "roll",
+    "fill_from_yesterday",
+    "fill_from_live",
+    "hold_recheck",
+    "accept",
+    "escalate"
+  ]
+}

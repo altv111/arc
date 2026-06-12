@@ -13,8 +13,16 @@ from arc.core.run_state import RunStateStore
 from arc.handlers.registry import HANDLERS
 from arc.nodes.base import compute_idempotency_key
 from arc.rule import build_rule, build_rule_from_json
+from arc.run_summary import render_run_summary
 from arc.runner import Runner
-from arc.visualize import dataset_contract, render_dataset_contract, render_rule_mermaid, render_rule_plan, render_rule_rich
+from arc.visualize import (
+    dataset_contract,
+    dataset_contract_payload,
+    render_dataset_contract,
+    render_rule_mermaid,
+    render_rule_plan,
+    render_rule_rich,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -132,13 +140,25 @@ def test_dataset_contract_lists_reporting_requirements(tmp_path):
         "completeness_exception_report",
         "completeness_summary",
         "dod_var_extract",
+        "historical_trade_status",
         "kannon_trade_level_sensi",
+        "riskfinder_calc_status",
         "tminus1_trade_mvar",
+        "upstream_trade_presence",
     ]
     assert "_upstream_results" not in rendered
     assert "parent_scope is applied centrally" in rendered
     assert "portfolio_names=<upstream:gate_breached_portfolios>" in rendered
     assert "trade_ids=<upstream:missing_trade_ids>" in rendered
+
+    payload = dataset_contract_payload(rule)
+    assert payload["rule_id"] == 1
+    assert payload["parent_scope"] == {"ubr_level_8": ["Europe Core Rates"]}
+    assert payload["datasets"][0]["dataset"] == "completeness_exception_report"
+    assert {
+        entry["dataset"]
+        for entry in payload["datasets"]
+    } >= {"riskfinder_calc_status", "historical_trade_status", "upstream_trade_presence"}
 
 
 def test_check_grain_mismatch_fails_fast(tmp_path):
@@ -228,9 +248,9 @@ def test_row1_run_applies_parent_and_check_scopes(tmp_path):
         row["portfolio"]: row["root_cause"]
         for row in attribute.downstream_hints["classifications"]
     } == {
-        "Portfolio Rates Basis": "riskfinder_error",
-        "Portfolio Rates Linear": "riskfinder_error",
-        "Portfolio Rates Options": "riskfinder_error",
+        "Portfolio Rates Basis": "expected_to_arrive_late",
+        "Portfolio Rates Linear": "arrived_but_errored",
+        "Portfolio Rates Options": "arrived_but_errored",
     }
 
     record = next(result for result in report.results if result.node_id == "record")
@@ -241,6 +261,71 @@ def test_row1_run_applies_parent_and_check_scopes(tmp_path):
     assert act.downstream_hints["correction_receipt"]["mutation_performed"] is False
     assert act.downstream_hints["correction_receipt"]["n_intents"] == 2
     assert (tmp_path / "runs" / "row1-test" / "run.json").exists()
+
+
+def test_demo_japan_and_global_snaps_have_distinct_scope_and_policy(tmp_path):
+    evidence_store, run_state_store = _stores(tmp_path)
+    runner_root = tmp_path / "runs"
+
+    japan_rule = build_rule_from_json(
+        REPO_ROOT / "fixtures" / "rules" / "row1_japan.json",
+        evidence_store=evidence_store,
+        run_state_store=run_state_store,
+    )
+    japan_runner = Runner(
+        reporting_client=CSVReportingClient(REPO_ROOT / "fixtures" / "demo" / "ECR" / "japan" / "2026-06-04"),
+        evidence_store=evidence_store,
+        run_state_store=run_state_store,
+        runs_root=runner_root,
+    )
+    japan_report = japan_runner.run_rule(
+        japan_rule,
+        _ctx().model_copy(update={"snapshot_id": "ECR-JAPAN-SNAP-2026-06-04"}),
+        run_id="japan-demo",
+    )
+
+    global_rule = build_rule_from_json(
+        REPO_ROOT / "fixtures" / "rules" / "row1_global.json",
+        evidence_store=evidence_store,
+        run_state_store=run_state_store,
+    )
+    global_runner = Runner(
+        reporting_client=CSVReportingClient(REPO_ROOT / "fixtures" / "demo" / "ECR" / "global" / "2026-06-04"),
+        evidence_store=evidence_store,
+        run_state_store=run_state_store,
+        runs_root=runner_root,
+    )
+    global_report = global_runner.run_rule(
+        global_rule,
+        _ctx().model_copy(update={"snapshot_id": "ECR-GLOBAL-SNAP-2026-06-04"}),
+        run_id="global-demo",
+    )
+
+    japan_gate = next(r for r in japan_report.results if r.node_id == "gate:missing_trade_threshold_gate:0")
+    global_gate = next(r for r in global_report.results if r.node_id == "gate:missing_trade_threshold_gate:0")
+    assert len(japan_gate.breached_scopes) == 2
+    assert len(global_gate.breached_scopes) == 5
+
+    japan_decide = next(r for r in japan_report.results if r.node_id == "decide")
+    global_decide = next(r for r in global_report.results if r.node_id == "decide")
+    assert [(d["decision"], d["classification"]) for d in japan_decide.downstream_hints["decisions"]] == [
+        ("roll", "arrived_but_errored"),
+        ("hold", "expected_to_arrive_late"),
+    ]
+    assert [(d["decision"], d["classification"]) for d in global_decide.downstream_hints["decisions"]] == [
+        ("roll", "arrived_but_errored"),
+        ("hold", "expected_to_arrive_late"),
+        ("roll", "missing_in_upstream"),
+        ("roll", "arrived_but_errored"),
+        ("roll", "missing_in_upstream"),
+    ]
+
+    summary = render_run_summary(japan_report)
+    assert "ARC Run Summary | Rule 1" in summary
+    assert "Snapshot    : ECR-JAPAN-SNAP-2026-06-04" in summary
+    assert "ECR Portfolio 01: arrived_but_errored -> roll" in summary
+    assert "ECR Portfolio 02: expected_to_arrive_late -> hold" in summary
+    assert str(runner_root / "japan-demo") in summary
 
 
 def test_dod_var_move_can_plan_grain_specific_extract(tmp_path):

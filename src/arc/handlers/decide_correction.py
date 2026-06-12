@@ -15,9 +15,6 @@ class DecideCorrectionHandler(CheckHandler):
     input_spec: ClassVar[InputSpec] = InputSpec(datasets={UPSTREAM_RESULTS_KEY: {}})
 
     def execute(self, inputs: ResolvedInputs, spec_slice: dict[str, Any]) -> HandlerOutput:
-        # Temporary placeholder policy: row1 always rolls until user-validated decision rules are specified.
-        decision = "roll"
-
         attributed = []
         for result in upstream_results(inputs):
             if result.node_type == "attribute":
@@ -25,11 +22,13 @@ class DecideCorrectionHandler(CheckHandler):
 
         decisions = [
             {
-                "decision": decision,
+                "decision": _decision_for(item),
                 "source_node_id": item["node_id"],
                 "check_id": item["check_id"],
                 "breached_scope_levels": item["breached_scope_levels"],
-                "policy": "placeholder_always_roll",
+                "policy": "missing_trade_v1",
+                "classification": item.get("classification"),
+                "late_arrival_possible": item.get("late_arrival_possible"),
             }
             for item in attributed
         ]
@@ -39,10 +38,20 @@ class DecideCorrectionHandler(CheckHandler):
             metrics={"n_decisions": len(decisions)},
             evidence_payloads={
                 "decisions": {
-                    "policy": "placeholder_always_roll",
-                    "todo": "Replace with user-validated policy using attribution, history, and decision options.",
+                    "policy": "missing_trade_v1",
                     "items": decisions,
                 }
             },
             downstream_hints={"decisions": decisions},
         )
+
+
+def _decision_for(attributed_breach: dict[str, Any]) -> str:
+    recommended = attributed_breach.get("recommended_decision")
+    if recommended in {"roll", "hold", "fill_from_live"}:
+        return recommended
+
+    classification = attributed_breach.get("classification")
+    if classification == "expected_to_arrive_late":
+        return "hold"
+    return "roll"

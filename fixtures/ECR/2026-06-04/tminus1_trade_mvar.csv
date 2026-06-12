@@ -1,7 +1,7 @@
-cobdate,trade_id,t_minus_1_mvar_eur
-2026-06-04,T2,20000
-2026-06-04,T10,4000
-2026-06-04,T11,0
-2026-06-04,T3,10000
-2026-06-04,T7,8000
-2026-06-04,T99,50000
+Region,UBR Level 8 Name,UBR Level 9 Name,Portfolio Name,Trader Book Name,cobdate,trade_id,t_minus_1_mvar_eur
+,Europe Core Rates,Europe Linear Flow,Portfolio Rates Linear,Book Linear 1,2026-06-04,T2,20000
+,Europe Core Rates,Europe Linear Flow,Portfolio Rates Linear,Book Linear 1,2026-06-04,T10,4000
+,Europe Core Rates,Europe Linear Flow,Portfolio Rates Linear,Book Linear 1,2026-06-04,T11,0
+,Europe Core Rates,Europe Non Linear,Portfolio Rates Options,Book Options 1,2026-06-04,T3,10000
+,Europe Core Rates,Europe Linear Flow,Portfolio Rates Basis,Book Basis 1,2026-06-04,T7,8000
+,US Credit,US Credit Flow,Portfolio Credit Flow,Book Credit 1,2026-06-04,T99,50000

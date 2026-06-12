@@ -31,6 +31,9 @@ class DatasetResolver:
             "trade_completeness": client.get_trade_completeness,
             "completeness_exception_report": client.get_completeness_exception_report,
             "kannon_trade_level_sensi": client.get_kannon_trade_level_sensi,
+            "riskfinder_calc_status": client.get_riskfinder_calc_status,
+            "historical_trade_status": client.get_historical_trade_status,
+            "upstream_trade_presence": client.get_upstream_trade_presence,
         }
         self._cache: dict[tuple[str, str, str, str], Any] = {}
 
@@ -55,6 +58,7 @@ class DatasetResolver:
                 name,
                 ctx.ba,
                 ctx.business_date.isoformat(),
+                ctx.snapshot_id,
                 json.dumps(parent_scope, sort_keys=True, separators=(",", ":")),
                 json.dumps(params, sort_keys=True, separators=(",", ":")),
             )
@@ -361,8 +365,10 @@ def _as_allowed(value: Any) -> set[Any]:
 def _row_matches_scope(row: Any, scope: dict[str, list[str]]) -> bool:
     for key, allowed in scope.items():
         if not hasattr(row, key):
-            continue
+            return False
         value = getattr(row, key)
+        if value is None:
+            return False
         if value not in set(allowed):
             return False
     return True

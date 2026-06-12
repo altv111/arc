@@ -10,6 +10,7 @@ from arc.core.run_state import RunStateStore
 from arc.rule import build_rule_from_json
 from arc.visualize import (
     render_dataset_contract,
+    render_dataset_contract_json,
     render_rule_mermaid,
     render_rule_plan,
     render_rule_rich,
@@ -27,7 +28,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--format",
-        choices=("rich", "mermaid", "plan", "text", "datasets"),
+        choices=("rich", "mermaid", "plan", "text", "datasets", "datasets-json"),
         default="rich",
         help="Output format.",
     )
@@ -45,6 +46,8 @@ def main() -> None:
         print(render_rule_rich(rule), end="")
     elif args.format == "datasets":
         print(render_dataset_contract(rule))
+    elif args.format == "datasets-json":
+        print(render_dataset_contract_json(rule))
     elif args.format == "plan":
         print(render_rule_plan(rule))
     elif args.format == "text":

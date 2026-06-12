@@ -1,0 +1,21 @@
+cobdate,Region,UBR Level 8 Name,UBR Level 8 ID,UBR Level 9 Name,VCS Run Qualifier,VCS Calc Type,Portfolio Name,Trader Book Name,Frequency,Trade Count Expected,Trade Count Error Partial,Trade Count Error Full,Trade Count Match,Trade Count Not Expected,Trade Count Not Received,Trade Count Received
+2026-06-04,Japan,Europe Core Rates,ECR,Europe Non Linear,1DVaR,FULLREVAL,ECR Portfolio 01,ECR Book 01,Daily,100,0,20,80,0,0,80
+2026-06-04,Japan,Europe Core Rates,ECR,Europe Linear Flow,1DVaR,FULLREVAL,ECR Portfolio 02,ECR Book 02,Daily,100,0,20,80,0,0,80
+2026-06-04,India,Europe Core Rates,ECR,Europe Non Linear,1DVaR,FULLREVAL,ECR Portfolio 03,ECR Book 03,Daily,100,0,20,80,0,0,80
+2026-06-04,India,Europe Core Rates,ECR,Europe Linear Flow,1DVaR,FULLREVAL,ECR Portfolio 04,ECR Book 04,Daily,100,0,20,80,0,0,80
+2026-06-04,India,Europe Core Rates,ECR,Europe Non Linear,1DVaR,FULLREVAL,ECR Portfolio 05,ECR Book 05,Daily,100,0,20,80,0,0,80
+2026-06-04,Japan,Europe Core Rates,ECR,Europe Linear Flow,1DVaR,FULLREVAL,ECR Portfolio 06,ECR Book 06,Daily,100,0,0,100,0,0,100
+2026-06-04,Japan,Europe Core Rates,ECR,Europe Non Linear,1DVaR,FULLREVAL,ECR Portfolio 07,ECR Book 07,Daily,100,0,0,100,0,0,100
+2026-06-04,Japan,Europe Core Rates,ECR,Europe Linear Flow,1DVaR,FULLREVAL,ECR Portfolio 08,ECR Book 08,Daily,100,0,0,100,0,0,100
+2026-06-04,Japan,Europe Core Rates,ECR,Europe Non Linear,1DVaR,FULLREVAL,ECR Portfolio 09,ECR Book 09,Daily,100,0,0,100,0,0,100
+2026-06-04,Japan,Europe Core Rates,ECR,Europe Linear Flow,1DVaR,FULLREVAL,ECR Portfolio 10,ECR Book 10,Daily,100,0,0,100,0,0,100
+2026-06-04,Japan,Europe Core Rates,ECR,Europe Non Linear,1DVaR,FULLREVAL,ECR Portfolio 11,ECR Book 11,Daily,100,0,0,100,0,0,100
+2026-06-04,EMEA,Europe Core Rates,ECR,Europe Linear Flow,1DVaR,FULLREVAL,ECR Portfolio 12,ECR Book 12,Daily,100,0,0,100,0,0,100
+2026-06-04,EMEA,Europe Core Rates,ECR,Europe Non Linear,1DVaR,FULLREVAL,ECR Portfolio 13,ECR Book 13,Daily,100,0,0,100,0,0,100
+2026-06-04,EMEA,Europe Core Rates,ECR,Europe Linear Flow,1DVaR,FULLREVAL,ECR Portfolio 14,ECR Book 14,Daily,100,0,0,100,0,0,100
+2026-06-04,Americas,Europe Core Rates,ECR,Europe Non Linear,1DVaR,FULLREVAL,ECR Portfolio 15,ECR Book 15,Daily,100,0,0,100,0,0,100
+2026-06-04,Americas,Europe Core Rates,ECR,Europe Linear Flow,1DVaR,FULLREVAL,ECR Portfolio 16,ECR Book 16,Daily,100,0,0,100,0,0,100
+2026-06-04,Americas,Europe Core Rates,ECR,Europe Non Linear,1DVaR,FULLREVAL,ECR Portfolio 17,ECR Book 17,Daily,100,0,0,100,0,0,100
+2026-06-04,Americas,Europe Core Rates,ECR,Europe Linear Flow,1DVaR,FULLREVAL,ECR Portfolio 18,ECR Book 18,Daily,100,0,0,100,0,0,100
+2026-06-04,Americas,Europe Core Rates,ECR,Europe Non Linear,1DVaR,FULLREVAL,ECR Portfolio 19,ECR Book 19,Daily,100,0,0,100,0,0,100
+2026-06-04,Americas,Europe Core Rates,ECR,Europe Linear Flow,1DVaR,FULLREVAL,ECR Portfolio 20,ECR Book 20,Daily,100,0,0,100,0,0,100

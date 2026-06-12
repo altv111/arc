@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from io import StringIO
 from typing import Any
@@ -139,6 +140,20 @@ def render_rule_plan(rule: Rule) -> str:
 
 def render_dataset_contract(rule: Rule) -> str:
     return "\n".join(render_dataset_contract_lines(rule))
+
+
+def render_dataset_contract_json(rule: Rule) -> str:
+    return json.dumps(dataset_contract_payload(rule), indent=2, sort_keys=True)
+
+
+def dataset_contract_payload(rule: Rule) -> dict[str, Any]:
+    return {
+        "rule_id": rule.row_id,
+        "breach": getattr(rule.spec, "breach", "ARC Rule"),
+        "parent_scope": rule.parent_scope,
+        "scope_note": "parent_scope is applied centrally before handler evaluation",
+        "datasets": dataset_contract(rule),
+    }
 
 
 def render_dataset_contract_lines(rule: Rule) -> list[str]:
